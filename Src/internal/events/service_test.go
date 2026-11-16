@@ -87,22 +87,29 @@ func TestEventFlow(t *testing.T) {
 		t.Fatalf("全天 %v %v", err, err2)
 	}
 
-	if err := svc.Signup(ctx, memberActor, item.ID); err != nil {
+	soonStart := time.Now().Add(48 * time.Hour)
+	soon, err := svc.Create(ctx, leaderActor, Draft{
+		Title: "即将例会", Kind: "例会", Starts: soonStart, Ends: soonStart.Add(2 * time.Hour), OwnerID: leaderActor.ID,
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Check(ctx, memberActor, item.ID, memberActor.ID, true); !errors.Is(err, ErrForbidden) {
+	if err := svc.Signup(ctx, memberActor, soon.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Check(ctx, memberActor, soon.ID, memberActor.ID, true); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("组员不能代签到: %v", err)
 	}
-	if err := svc.Check(ctx, leaderActor, item.ID, memberActor.ID, true); err != nil {
+	if err := svc.Check(ctx, leaderActor, soon.ID, memberActor.ID, true); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Cancel(ctx, memberActor, item.ID); err == nil || !strings.Contains(err.Error(), "已签到") {
+	if err := svc.Cancel(ctx, memberActor, soon.ID); err == nil || !strings.Contains(err.Error(), "已签到") {
 		t.Fatal(err)
 	}
-	if err := svc.Check(ctx, leaderActor, item.ID, memberActor.ID, false); err != nil {
+	if err := svc.Check(ctx, leaderActor, soon.ID, memberActor.ID, false); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.Cancel(ctx, memberActor, item.ID); err != nil {
+	if err := svc.Cancel(ctx, memberActor, soon.ID); err != nil {
 		t.Fatal(err)
 	}
 

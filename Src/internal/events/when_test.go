@@ -59,8 +59,11 @@ func TestPlaceCrossDay(t *testing.T) {
 	item := Event{ID: 1, Title: "跨日", Starts: start, Ends: end}
 	placeOnDays(days, []Event{item})
 	placeOnDays(feb, []Event{item})
-	if !dayHas(days, "2026-01-31", 1) || dayHas(days, "2026-02-01", 1) {
-		t.Fatal("一月应只含 31 日")
+	if !dayHas(days, "2026-01-31", 1) || !dayHas(days, "2026-02-01", 1) {
+		t.Fatal("跨日应同时出现在 31 日和次日")
+	}
+	if dayHas(days, "2026-01-30", 1) {
+		t.Fatal("不应出现在 30 日")
 	}
 	if !dayHas(feb, "2026-02-01", 1) || dayHas(feb, "2026-01-31", 1) {
 		t.Fatal("二月应含 1 日")
