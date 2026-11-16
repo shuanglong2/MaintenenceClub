@@ -83,7 +83,7 @@ func (s *Service) Export(ctx context.Context, actor Actor, w io.Writer) error {
 					continue
 				}
 				seen[id] = true
-				meta, file, err := s.files.Open(ctx, id)
+				_, file, err := s.files.Open(ctx, id)
 				if err != nil {
 					continue
 				}
