@@ -13,7 +13,7 @@ func TestUpTwice(t *testing.T) {
 	ctx := context.Background()
 	mod := []Module{{
 		Name: "demo",
-		FS:   fstest.MapFS{
+		FS: fstest.MapFS{
 			"001_init.sql": &fstest.MapFile{Data: []byte("CREATE TABLE demo_item (id int PRIMARY KEY);\nINSERT INTO demo_item (id) VALUES (1);\n")},
 		},
 	}}
@@ -37,7 +37,7 @@ func TestUpRollsBack(t *testing.T) {
 	ctx := context.Background()
 	bad := []Module{{
 		Name: "boom",
-		FS:   fstest.MapFS{
+		FS: fstest.MapFS{
 			"001_bad.sql": &fstest.MapFile{Data: []byte("CREATE TABLE rolled (id int);\nSELECT 1/0;\n")},
 		},
 	}}
@@ -54,7 +54,7 @@ func TestUpRollsBack(t *testing.T) {
 
 	good := []Module{{
 		Name: "boom",
-		FS:   fstest.MapFS{
+		FS: fstest.MapFS{
 			"001_bad.sql": &fstest.MapFile{Data: []byte("CREATE TABLE rolled (id int);\n")},
 		},
 	}}
@@ -68,7 +68,7 @@ func TestUpConcurrent(t *testing.T) {
 	ctx := context.Background()
 	mod := []Module{{
 		Name: "once",
-		FS:   fstest.MapFS{
+		FS: fstest.MapFS{
 			"001_once.sql": &fstest.MapFile{Data: []byte("CREATE TABLE once_run (id int PRIMARY KEY);\nINSERT INTO once_run (id) VALUES (1);\nSELECT pg_sleep(0.4);\n")},
 		},
 	}}

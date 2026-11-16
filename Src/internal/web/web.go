@@ -99,7 +99,7 @@ func New(db Pinger, assets *Assets) (http.Handler, error) {
 	mux.HandleFunc("GET /static/{path...}", s.staticFile)
 	mux.HandleFunc("/", s.notFound)
 	var handler http.Handler = mux
-	handler = limitBody(2 << 20, handler)
+	handler = limitBody(2<<20, handler)
 	handler = securityHeaders(handler)
 	handler = accessLog(handler)
 	handler = requestID(handler)
