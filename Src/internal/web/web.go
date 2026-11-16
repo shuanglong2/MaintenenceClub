@@ -73,6 +73,7 @@ func (a *Assets) URL(name string) string {
 type page struct {
 	Title   string
 	Body    string
+	HTML    template.HTML
 	Status  int
 	Message string
 }
@@ -121,9 +122,16 @@ func (s *server) notFound(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *server) render(w http.ResponseWriter, status int, data page) {
+	var body bytes.Buffer
+	if err := s.tpl.ExecuteTemplate(&body, data.Body, data); err != nil {
+		slog.Error("渲染页面", "err", err, "body", data.Body)
+		http.Error(w, "内部错误", http.StatusInternalServerError)
+		return
+	}
+	data.HTML = template.HTML(body.String())
 	var buf bytes.Buffer
 	if err := s.tpl.ExecuteTemplate(&buf, "layout", data); err != nil {
-		slog.Error("渲染页面", "err", err)
+		slog.Error("渲染布局", "err", err)
 		http.Error(w, "内部错误", http.StatusInternalServerError)
 		return
 	}
