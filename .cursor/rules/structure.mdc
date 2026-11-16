@@ -1,0 +1,21 @@
+---
+description: MClub 仓库目录与产物位置
+alwaysApply: true
+---
+
+# 目录与命名
+
+仓库名是 MaintenenceClub, 程序名是 mclub. 模块路径是 `github.com/shuanglong2/MaintenenceClub`.
+
+- `Src`: 全部 Go 源码. 入口在 `Src/cmd/mclub`, 业务代码放 `Src/internal/<模块>`.
+- `Docs`: 计划与技术文档. 根目录说明只保留 `README.md` 和 `CHANGELOG.md`.
+- `Res`: 图片, 脚本等跨模块资源. 不放编译结果.
+- `Publish/linux-x64` 与 `Publish/win-x64`: Actions 交叉编译出的二进制. 不把二进制提交进 git.
+
+```text
+Src/cmd/mclub/main.go
+Publish/linux-x64/mclub
+Publish/win-x64/mclub.exe
+```
+
+包名使用小写. 不要把源码或二进制写到这些目录以外.

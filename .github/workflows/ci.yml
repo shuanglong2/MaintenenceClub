@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - "Docs/**"
+  pull_request:
+    paths-ignore:
+      - "Docs/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CGO_ENABLED: "0"
+  GOAMD64: v1
+  GOCACHE: ${{ github.workspace }}/.gocache
+  GOMODCACHE: ${{ github.workspace }}/.gomodcache
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 检出
+        uses: actions/checkout@v7
+
+      - name: 安装 Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: 缓存模块与构建
+        uses: actions/cache@v6
+        with:
+          path: |
+            .gomodcache
+            .gocache
+          key: go-${{ runner.os }}-${{ hashFiles('go.sum', 'go.mod') }}
+          restore-keys: |
+            go-${{ runner.os }}-
+
+      - name: 显示 Go
+        run: go version
+
+      - name: 检查格式
+        run: |
+          unformatted="$(gofmt -l Src)"
+          if [ -n "$unformatted" ]; then
+            echo "需要 gofmt:"
+            echo "$unformatted"
+            gofmt -d Src
+            exit 1
+          fi
+
+      - name: 整理模块文件
+        id: tidy
+        run: |
+          go mod tidy
+          if [ -n "$(git status --porcelain -- go.mod go.sum)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 准备模块产物
+        if: steps.tidy.outputs.changed == 'true'
+        run: |
+          mkdir -p "${RUNNER_TEMP}/gomod"
+          cp go.mod "${RUNNER_TEMP}/gomod/go.mod"
+          if [ -f go.sum ]; then
+            cp go.sum "${RUNNER_TEMP}/gomod/go.sum"
+          fi
+
+      - name: 上传 go.mod 与 go.sum
+        if: steps.tidy.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: go-mod
+          path: ${{ runner.temp }}/gomod
+          if-no-files-found: error
+
+      - name: 要求提交模块文件
+        if: steps.tidy.outputs.changed == 'true'
+        run: |
+          echo "go.mod 或 go.sum 与仓库不一致. 请下载 artifact go-mod 后提交."
+          git status --porcelain -- go.mod go.sum
+          exit 1
+
+      - name: 测试
+        run: go test ./...
+
+      - name: 编译 linux-x64 与 win-x64
+        run: |
+          mkdir -p Publish/linux-x64 Publish/win-x64
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o Publish/linux-x64/mclub ./Src/cmd/mclub
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
+
+      - name: 检查编译结果
+        run: |
+          test -x Publish/linux-x64/mclub
+          test -f Publish/win-x64/mclub.exe
+          file Publish/linux-x64/mclub
+          file Publish/win-x64/mclub.exe
+          go version -m Publish/linux-x64/mclub | grep -q "GOAMD64=v1"
+          go version -m Publish/win-x64/mclub.exe | grep -q "GOAMD64=v1"
+          find Publish -type f | sort
+
+      - name: 上传编译结果
+        uses: actions/upload-artifact@v7
+        with:
+          name: Publish
+          path: |
+            Publish/linux-x64/mclub
+            Publish/win-x64/mclub.exe
+          if-no-files-found: error
+
+  prune-cache:
+    needs: build
+    if: success()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 检出
+        uses: actions/checkout@v7
+
+      - name: 移除无用缓存
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: go-${{ runner.os }}-${{ hashFiles('go.sum', 'go.mod') }}
+        run: |
+          gh api --paginate "/repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100" \
+            --jq '.actions_caches[] | [.id, .key] | @tsv' |
+            while IFS="$(printf '\t')" read -r id key; do
+              if [ -z "$id" ] || [ "$key" = "$KEEP" ]; then
+                continue
+              fi
+              echo "delete ${id} ${key}"
+              gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/caches/${id}"
+            done

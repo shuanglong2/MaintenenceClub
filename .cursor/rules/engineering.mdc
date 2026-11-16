@@ -1,0 +1,22 @@
+---
+description: 云端编译, 缓存与每次对话提交
+alwaysApply: true
+---
+
+# 工程约束
+
+不在本机执行 `go build`, `go test`, `go fmt`, `go mod tidy` 或 `go get`. 本机不安装, 也不使用 Go 工具链.
+
+推送到 GitHub 后由 Actions 编译. 一次提交如果只改 `Docs`, 工作流必须跳过, 不能编译.
+
+流水线要输出这些结果:
+
+1. 只缓存 `.gomodcache` 和 `.gocache`. 构建成功后删除当前 key 以外的 Actions 缓存
+2. `gofmt -l Src`, 有差异就失败并打印 diff
+3. `go mod tidy`. `go.mod` 或 `go.sum` 发生变化时, 上传 artifact `go-mod` 并失败. 下载该产物后再提交, 不在本机生成
+4. `go test ./...`
+5. `CGO_ENABLED=0` 且 `GOAMD64=v1`, 交叉编译 linux-x64 与 win-x64 到 `Publish`, 再上传 artifact
+
+每个对话结束前要有一次 git 提交, 说明写清原因. 使用本机已有的 git 用户. 不要把 Cursor 写成作者, 提交者或 `Co-authored-by`. 不要修改 git config.
+
+服务器只运行 `Publish/linux-x64/mclub`, 前面是 Nginx, 数据库是 PostgreSQL 18. 目标机器固定为没有 AVX 的 J1800.

@@ -1,0 +1,14 @@
+/.gocache/
+/.gomodcache/
+
+/Publish/*
+!/Publish/linux-x64/
+!/Publish/win-x64/
+/Publish/linux-x64/*
+!/Publish/linux-x64/.gitkeep
+/Publish/win-x64/*
+!/Publish/win-x64/.gitkeep
+
+*.exe
+*.test
+*.out
