@@ -1,0 +1,11 @@
+{{define "item-label-body"}}
+<article class="label-sheet">
+<p>{{.Inv.Item.Category}}</p>
+<h1>{{.Inv.Item.Name}}</h1>
+<p>{{.Inv.Item.Code}}</p>
+<p>{{.Inv.Item.Location}}</p>
+<p class="hint">/inventory/items/{{.Inv.Item.ID}}</p>
+</article>
+<p class="tools"><a href="/inventory/items/{{.Inv.Item.ID}}">返回物品</a></p>
+<p class="hint">用浏览器的打印功能. 页面地址保持为 /inventory/items/{{.Inv.Item.ID}}</p>
+{{end}}

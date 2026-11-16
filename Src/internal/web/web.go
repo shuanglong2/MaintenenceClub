@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
 )
@@ -95,6 +96,7 @@ type page struct {
 	Prev       int
 	HasNext    bool
 	Doc        docView
+	Inv        invView
 }
 
 type userView struct {
@@ -107,6 +109,7 @@ type server struct {
 	db     Pinger
 	people *people.Service
 	docs   *docs.Service
+	inv    *inventory.Service
 	secure bool
 	proxy  string
 	tpl    *template.Template
@@ -116,6 +119,7 @@ type server struct {
 type Option struct {
 	People       *people.Service
 	Docs         *docs.Service
+	Inventory    *inventory.Service
 	Secure       bool
 	TrustedProxy string
 }
@@ -123,16 +127,18 @@ type Option struct {
 // New 组装路由和中间件.
 func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 	tpl := template.New("").Funcs(template.FuncMap{
-		"static": assets.URL,
-		"time8":  formatTime,
-		"yuan":   formatYuan,
-		"add":    func(a, b int) int { return a + b },
+		"static":     assets.URL,
+		"time8":      formatTime,
+		"yuan":       formatYuan,
+		"add":        func(a, b int) int { return a + b },
+		"stateLabel": inventory.StateLabel,
+		"kindLabel":  inventory.KindLabel,
 	})
 	tpl, err := tpl.ParseFS(assets.fsys, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
-	s := &server{assets: assets, db: db, people: opt.People, docs: opt.Docs, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl}
+	s := &server{assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl}
 	mux := http.NewServeMux()
 	s.routes(mux)
 	var handler http.Handler = mux
@@ -191,6 +197,28 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /docs/p/{id}/{slug}", s.docsView)
 	mux.HandleFunc("GET /docs/p/{id}", s.docsView)
 	mux.HandleFunc("GET /files/{id}", s.fileDownload)
+	mux.HandleFunc("GET /inventory", s.inventoryList)
+	mux.HandleFunc("GET /inventory/low", s.inventoryLow)
+	mux.HandleFunc("GET /inventory/new", s.inventoryNew)
+	mux.HandleFunc("POST /inventory", s.inventoryCreate)
+	mux.HandleFunc("GET /inventory/import", s.inventoryImportForm)
+	mux.HandleFunc("POST /inventory/import", s.inventoryImport)
+	mux.HandleFunc("GET /inventory/template.csv", s.inventoryTemplate)
+	mux.HandleFunc("GET /inventory/export.csv", s.inventoryExport)
+	mux.HandleFunc("POST /inventory/locations", s.inventoryLocation)
+	mux.HandleFunc("GET /inventory/items/{id}/edit", s.inventoryEdit)
+	mux.HandleFunc("GET /inventory/items/{id}/label", s.inventoryLabel)
+	mux.HandleFunc("POST /inventory/items/{id}/photo", s.inventoryPhoto)
+	mux.HandleFunc("POST /inventory/items/{id}/void", s.inventoryVoid)
+	mux.HandleFunc("POST /inventory/items/{id}/unvoid", s.inventoryUnvoid)
+	mux.HandleFunc("POST /inventory/items/{id}/move", s.inventoryMove)
+	mux.HandleFunc("POST /inventory/items/{id}/event", s.inventoryEvent)
+	mux.HandleFunc("POST /inventory/items/{id}", s.inventoryUpdate)
+	mux.HandleFunc("GET /inventory/items/{id}", s.inventoryItem)
+	mux.HandleFunc("GET /inventory/stocktakes", s.stocktakes)
+	mux.HandleFunc("POST /inventory/stocktakes", s.stocktakeCreate)
+	mux.HandleFunc("POST /inventory/stocktakes/{id}", s.stocktakeSave)
+	mux.HandleFunc("GET /inventory/stocktakes/{id}", s.stocktakeShow)
 	mux.HandleFunc("/", s.notFound)
 }
 

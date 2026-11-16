@@ -1,0 +1,16 @@
+{{define "stocktakes-body"}}
+<h1>盘点</h1>
+<p><a href="/inventory">返回库存</a></p>
+<form class="stack" method="post" action="/inventory/stocktakes">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>标题<input name="title" required placeholder="例如 11 月盘点"></label>
+<button type="submit">开始盘点</button>
+</form>
+{{if not .Inv.Stocktakes}}<p class="empty">还没有盘点单.</p>{{else}}
+<ul>
+{{range .Inv.Stocktakes}}
+<li><a href="/inventory/stocktakes/{{.ID}}">{{.Title}}</a> {{if eq .Status "open"}}进行中{{else}}已确认{{end}} {{time8 .Created}}</li>
+{{end}}
+</ul>
+{{end}}
+{{end}}

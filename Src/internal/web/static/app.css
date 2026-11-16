@@ -163,3 +163,30 @@ pre.diff,
 mark {
   background: #ffe08a;
 }
+
+.photo {
+  max-width: 16rem;
+  height: auto;
+}
+
+.label-sheet {
+  border: 1px solid #1c1c1c;
+  padding: 1.5rem;
+  background: #fff;
+}
+
+.label-sheet h1 {
+  font-size: 2rem;
+}
+
+@media print {
+  .top,
+  .tools,
+  form {
+    display: none;
+  }
+
+  body {
+    background: #fff;
+  }
+}

@@ -1,0 +1,28 @@
+{{define "stocktake-body"}}
+<h1>{{.Inv.Stocktake.Title}}</h1>
+<p><a href="/inventory/stocktakes">全部盘点</a></p>
+{{if eq .Inv.Stocktake.Status "confirmed"}}<p class="notice">已确认 {{time8 .Inv.Stocktake.Confirmed}}</p>{{end}}
+<form method="post" action="/inventory/stocktakes/{{.Inv.Stocktake.ID}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<table>
+<thead><tr><th>编号</th><th>名称</th><th>账面</th><th>实盘</th><th>差异</th></tr></thead>
+<tbody>
+{{range .Inv.Lines}}
+<tr>
+<td>{{.Code}}</td>
+<td><a href="/inventory/items/{{.ItemID}}">{{.Name}}</a></td>
+<td>{{.Expected}} {{.Unit}}</td>
+<td>{{if eq $.Inv.Stocktake.Status "open"}}<input name="qty_{{.ItemID}}" type="number" min="0" {{if .Filled}}value="{{.ActualQty}}"{{end}}>{{else}}{{if .Filled}}{{.ActualQty}}{{end}}{{end}}</td>
+<td>{{if .Filled}}{{.Diff}}{{end}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+{{if eq .Inv.Stocktake.Status "open"}}
+<p class="tools">
+<button type="submit">保存</button>
+<button type="submit" name="confirm" value="1">确认并调整库存</button>
+</p>
+{{end}}
+</form>
+{{end}}

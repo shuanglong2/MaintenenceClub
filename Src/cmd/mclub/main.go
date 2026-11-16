@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/audit"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
@@ -97,9 +98,11 @@ func cmdServe() error {
 	if err := docSvc.EnsureWelcome(ctx); err != nil {
 		slog.Warn("写入说明文档失败", "err", err)
 	}
+	inv := inventory.New(pool, store)
+	web.RegisterInventoryWidget(inv)
 	go cleanUploads(ctx, store)
 	handler, err := web.New(pool, assets, web.Option{
-		People: svc, Docs: docSvc, Secure: cfg.CookieSecure, TrustedProxy: cfg.TrustedProxy,
+		People: svc, Docs: docSvc, Inventory: inv, Secure: cfg.CookieSecure, TrustedProxy: cfg.TrustedProxy,
 	})
 	if err != nil {
 		return err
@@ -151,6 +154,7 @@ func modules() []migrate.Module {
 		{Name: "people", FS: people.SQL},
 		{Name: "files", FS: files.SQL},
 		{Name: "docs", FS: docs.SQL},
+		{Name: "inventory", FS: inventory.SQL},
 	}
 }
 

@@ -1,0 +1,52 @@
+{{define "inventory-body"}}
+<h1>{{.Title}}</h1>
+<p class="tools">
+<a href="/inventory/low">低库存</a>
+<a href="/inventory/export.csv">导出</a>
+{{if .Inv.Manage}}<a href="/inventory/new">新建</a><a href="/inventory/import">导入</a><a href="/inventory/stocktakes">盘点</a>{{end}}
+</p>
+<form class="filters" method="get" action="/inventory">
+<label>关键词<input name="q" value="{{.Inv.Query}}"></label>
+<label>类别
+<select name="category">
+<option value="">全部</option>
+<option value="器材" {{if eq .Inv.Category "器材"}}selected{{end}}>器材</option>
+<option value="工具" {{if eq .Inv.Category "工具"}}selected{{end}}>工具</option>
+<option value="消耗品" {{if eq .Inv.Category "消耗品"}}selected{{end}}>消耗品</option>
+<option value="元件" {{if eq .Inv.Category "元件"}}selected{{end}}>元件</option>
+</select>
+</label>
+<button type="submit">筛选</button>
+</form>
+{{if .Inv.Notice}}<p class="hint">{{.Inv.Notice}}</p>{{end}}
+{{if not .Inv.Items}}<p class="empty">没有物品.</p>{{else}}
+<table>
+<thead><tr><th>编号</th><th>名称</th><th>类别</th><th>数量</th><th>位置</th></tr></thead>
+<tbody>
+{{range .Inv.Items}}
+<tr>
+<td>{{.Code}}</td>
+<td><a href="/inventory/items/{{.ID}}">{{.Name}}</a></td>
+<td>{{.Category}}</td>
+<td>{{if .Tracked}}{{stateLabel .State}}{{else}}{{.Qty}} {{.Unit}}{{end}}</td>
+<td>{{.Location}}</td>
+</tr>
+{{end}}
+</tbody>
+</table>
+{{end}}
+{{if .Inv.Manage}}
+<h2>新建位置</h2>
+<form class="stack" method="post" action="/inventory/locations">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>名称<input name="name" required></label>
+<label>上级
+<select name="parent">
+<option value="0">无</option>
+{{range .Inv.Locations}}<option value="{{.ID}}">{{.Path}}</option>{{end}}
+</select>
+</label>
+<button type="submit">创建位置</button>
+</form>
+{{end}}
+{{end}}

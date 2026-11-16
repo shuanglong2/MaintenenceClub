@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/search"
@@ -505,16 +506,34 @@ func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	allowed, err := s.docs.CanDownload(r.Context(), actor, id)
-	if err != nil {
-		s.showDocErr(w, r, err)
-		return
+	allowed := false
+	var err error
+	if s.docs != nil {
+		allowed, err = s.docs.CanDownload(r.Context(), actor, id)
+		if err != nil {
+			s.showDocErr(w, r, err)
+			return
+		}
+	}
+	if !allowed && s.inv != nil {
+		allowed, err = s.inv.CanSeeFile(r.Context(), inventory.Actor{
+			ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP,
+		}, id)
+		if err != nil {
+			s.showInvErr(w, r, err)
+			return
+		}
 	}
 	if !allowed {
 		s.notFound(w, r)
 		return
 	}
-	meta, file, err := s.docs.Files().Open(r.Context(), id)
+	store := s.uploads()
+	if store == nil {
+		s.notFound(w, r)
+		return
+	}
+	meta, file, err := store.Open(r.Context(), id)
 	if err != nil {
 		s.showDocErr(w, r, err)
 		return

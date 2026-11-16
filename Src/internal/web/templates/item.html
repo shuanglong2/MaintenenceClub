@@ -1,0 +1,107 @@
+{{define "item-body"}}
+<h1>{{.Inv.Item.Name}}</h1>
+<p class="tools">
+<a href="/inventory">返回</a>
+<a href="/inventory/items/{{.Inv.Item.ID}}/label">标签</a>
+{{if .Inv.Manage}}<a href="/inventory/items/{{.Inv.Item.ID}}/edit">编辑</a>{{end}}
+</p>
+{{if .Inv.Item.PhotoID}}<p><img class="photo" src="/files/{{.Inv.Item.PhotoID}}" alt=""></p>{{end}}
+<dl>
+<div><dt>编号</dt><dd>{{.Inv.Item.Code}}</dd></div>
+<div><dt>类别</dt><dd>{{.Inv.Item.Category}}</dd></div>
+<div><dt>规格</dt><dd>{{.Inv.Item.Spec}}</dd></div>
+<div><dt>位置</dt><dd>{{.Inv.Item.Location}}</dd></div>
+<div><dt>数量</dt><dd>{{.Inv.Item.Qty}} {{.Inv.Item.Unit}}</dd></div>
+{{if .Inv.Item.Tracked}}<div><dt>状态</dt><dd>{{stateLabel .Inv.Item.State}}</dd></div>{{end}}
+{{if not .Inv.Item.Tracked}}<div><dt>最低库存</dt><dd>{{.Inv.Item.MinQty}}</dd></div>{{end}}
+{{if .Inv.Item.Note}}<div><dt>备注</dt><dd>{{.Inv.Item.Note}}</dd></div>{{end}}
+</dl>
+{{if .Inv.Item.Voided}}
+<p class="notice">已作废: {{.Inv.Item.VoidReason}}</p>
+{{if .Inv.Manage}}
+<form method="post" action="/inventory/items/{{.Inv.Item.ID}}/unvoid">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<button type="submit">恢复</button>
+</form>
+{{end}}
+{{else}}
+{{if not .Inv.Item.Tracked}}
+<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/move">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="in">
+<label>入库数量<input name="qty" type="number" min="1" value="1" required></label>
+<label>备注<input name="note"></label>
+<button type="submit">入库</button>
+</form>
+<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/move">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="use">
+<label>领用数量<input name="qty" type="number" min="1" value="1" required></label>
+<label>备注<input name="note"></label>
+<button type="submit">领用</button>
+</form>
+{{end}}
+{{if and .Inv.Item.Tracked (eq .Inv.Item.State "available")}}
+<form method="post" action="/inventory/items/{{.Inv.Item.ID}}/event">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="borrow">
+<button type="submit">借出</button>
+</form>
+{{if .Inv.Manage}}
+<form method="post" action="/inventory/items/{{.Inv.Item.ID}}/event">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="repair">
+<button type="submit">送修</button>
+</form>
+{{end}}
+{{end}}
+{{if and .Inv.Item.Tracked (eq .Inv.Item.State "borrowed")}}
+<form method="post" action="/inventory/items/{{.Inv.Item.ID}}/event">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="return">
+<button type="submit">归还</button>
+</form>
+{{end}}
+{{if and .Inv.Manage .Inv.Item.Tracked (eq .Inv.Item.State "repairing")}}
+<form method="post" action="/inventory/items/{{.Inv.Item.ID}}/event">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="repaired">
+<button type="submit">修好</button>
+</form>
+{{end}}
+{{if and .Inv.Manage (gt .Inv.Item.Qty 0)}}
+<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/move">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="scrap">
+<label>报废数量<input name="qty" type="number" min="1" max="{{.Inv.Item.Qty}}" value="{{.Inv.Item.Qty}}" required></label>
+<button type="submit">报废</button>
+</form>
+{{end}}
+{{if .Inv.Manage}}
+<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/photo" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>照片<input type="file" name="file" accept="image/*" required></label>
+<button type="submit">上传照片</button>
+</form>
+<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/void">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>作废原因<input name="reason" required></label>
+<button type="submit">作废</button>
+</form>
+{{end}}
+{{end}}
+<h2>流水</h2>
+{{if not .Inv.Moves}}<p class="empty">还没有数量变动.</p>{{else}}
+<ul>
+{{range .Inv.Moves}}<li>{{kindLabel .Kind}} {{.Qty}} {{.Actor}} {{time8 .Created}} {{.Note}}</li>{{end}}
+</ul>
+{{end}}
+{{if .Inv.Item.Tracked}}
+<h2>状态记录</h2>
+{{if not .Inv.Events}}<p class="empty">还没有借还记录.</p>{{else}}
+<ul>
+{{range .Inv.Events}}<li>{{kindLabel .Kind}} {{.Actor}} {{time8 .Created}} {{.Note}}</li>{{end}}
+</ul>
+{{end}}
+{{end}}
+{{end}}

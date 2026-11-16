@@ -1,0 +1,34 @@
+{{define "item-form-body"}}
+<h1>{{.Title}}</h1>
+<form class="stack" method="post" action="{{if .Editing}}/inventory/items/{{.Inv.Item.ID}}{{else}}/inventory{{end}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>编号<input name="code" value="{{.Inv.Item.Code}}" required></label>
+<label>名称<input name="name" value="{{.Inv.Item.Name}}" required></label>
+<label>类别
+<select name="category">
+<option value="器材" {{if eq .Inv.Item.Category "器材"}}selected{{end}}>器材</option>
+<option value="工具" {{if eq .Inv.Item.Category "工具"}}selected{{end}}>工具</option>
+<option value="消耗品" {{if eq .Inv.Item.Category "消耗品"}}selected{{end}}>消耗品</option>
+<option value="元件" {{if eq .Inv.Item.Category "元件"}}selected{{end}}>元件</option>
+</select>
+</label>
+<label>规格<input name="spec" value="{{.Inv.Item.Spec}}"></label>
+<label>单位<input name="unit" value="{{.Inv.Item.Unit}}"></label>
+<label>位置
+<select name="location">
+<option value="0">未指定</option>
+{{range .Inv.Locations}}<option value="{{.ID}}" {{if eq .ID $.Inv.Item.LocationID}}selected{{end}}>{{.Path}}</option>{{end}}
+</select>
+</label>
+{{if .Editing}}
+<input type="hidden" name="tracked" value="{{if .Inv.Item.Tracked}}1{{end}}">
+<p class="hint">逐件管理: {{if .Inv.Item.Tracked}}是{{else}}否{{end}}</p>
+{{else}}
+<label class="check"><input type="checkbox" name="tracked" value="1"> 逐件管理</label>
+<label>初始数量<input name="qty" type="number" min="0" value="0"></label>
+{{end}}
+<label>最低库存<input name="min_qty" type="number" min="0" value="{{.Inv.Item.MinQty}}"></label>
+<label>备注<textarea name="note" rows="3">{{.Inv.Item.Note}}</textarea></label>
+<button type="submit">保存</button>
+</form>
+{{end}}
