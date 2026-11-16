@@ -79,7 +79,7 @@ func TestPeopleFlow(t *testing.T) {
 	if err := svc.Exit(ctx, actor, session.User.ID); !errors.Is(err, ErrLastLeader) {
 		t.Fatalf("不能退出最后的组长: %v", err)
 	}
-	if _, err := svc.Update(ctx, actor, session.User.ID, Input{Name: "组长", Role: RoleMember}); !errors.Is(err, ErrLastLeader) {
+	if err := svc.Update(ctx, actor, session.User.ID, Input{Name: "组长", Role: RoleMember}); !errors.Is(err, ErrLastLeader) {
 		t.Fatalf("不能降级最后的组长: %v", err)
 	}
 	if err := svc.Update(ctx, actor, memberSession.User.ID, Input{Name: "组员甲", Role: RoleLeader}); err != nil {
