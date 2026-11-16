@@ -65,8 +65,8 @@ func TestPlaceCrossDay(t *testing.T) {
 	if dayHas(days, "2026-01-30", 1) {
 		t.Fatal("不应出现在 30 日")
 	}
-	if !dayHas(feb, "2026-02-01", 1) || dayHas(feb, "2026-01-31", 1) {
-		t.Fatal("二月应含 1 日")
+	if !dayHas(feb, "2026-02-01", 1) || !dayHas(feb, "2026-01-31", 1) || dayHas(feb, "2026-02-02", 1) {
+		t.Fatal("二月格子应含 31 日和 1 日, 不含 2 日")
 	}
 	allStart, allEnd, err := ParseRange(true, "2026-01-31", "", "2026-01-31", "")
 	if err != nil {
