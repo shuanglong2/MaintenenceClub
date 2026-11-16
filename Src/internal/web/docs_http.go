@@ -136,7 +136,7 @@ func (s *server) saveDoc(w http.ResponseWriter, r *http.Request, id int64) {
 		}
 		s.render(w, r, http.StatusConflict, page{
 			Title: "保存冲突", Body: "doc-conflict-body",
-			Doc:   docView{Conflict: out.Conflict, Draft: draft, Folders: folders, Page: docs.Page{ID: id}},
+			Doc: docView{Conflict: out.Conflict, Draft: draft, Folders: folders, Page: docs.Page{ID: id}},
 		})
 		return
 	}
@@ -172,7 +172,7 @@ func (s *server) docsConflict(w http.ResponseWriter, r *http.Request) {
 	if out.Conflict != nil {
 		s.render(w, r, http.StatusConflict, page{
 			Title: "保存冲突", Body: "doc-conflict-body",
-			Doc:   docView{Conflict: out.Conflict, Draft: draft, Page: docs.Page{ID: id}},
+			Doc: docView{Conflict: out.Conflict, Draft: draft, Page: docs.Page{ID: id}},
 		})
 		return
 	}
@@ -199,7 +199,7 @@ func (s *server) docsView(w http.ResponseWriter, r *http.Request) {
 	}
 	s.render(w, r, http.StatusOK, page{
 		Title: row.Title, Body: "doc-body",
-		Doc:   docView{Page: row, HTML: mdown.Render(row.Body), Management: actor.Role != "member"},
+		Doc: docView{Page: row, HTML: mdown.Render(row.Body), Management: actor.Role != "member"},
 	})
 }
 
@@ -245,7 +245,7 @@ func (s *server) docsHistory(w http.ResponseWriter, r *http.Request) {
 	}
 	s.render(w, r, http.StatusOK, page{
 		Title: "历史 " + row.Title, Body: "doc-history-body",
-		Doc:   docView{Page: row, Versions: versions},
+		Doc: docView{Page: row, Versions: versions},
 	})
 }
 
@@ -275,7 +275,7 @@ func (s *server) docsVersion(w http.ResponseWriter, r *http.Request) {
 	}
 	s.render(w, r, http.StatusOK, page{
 		Title: "版本 " + strconv.Itoa(version), Body: "doc-version-body",
-		Doc:   docView{Page: row, Version: item, HTML: mdown.Render(item.Body)},
+		Doc: docView{Page: row, Version: item, HTML: mdown.Render(item.Body)},
 	})
 }
 
@@ -314,7 +314,7 @@ func (s *server) docsRestore(w http.ResponseWriter, r *http.Request) {
 	if out.Conflict != nil {
 		s.render(w, r, http.StatusConflict, page{
 			Title: "保存冲突", Body: "doc-conflict-body",
-			Doc:   docView{Conflict: out.Conflict, Page: row, Draft: draftFrom(row)},
+			Doc: docView{Conflict: out.Conflict, Page: row, Draft: draftFrom(row)},
 		})
 		return
 	}
