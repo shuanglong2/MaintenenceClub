@@ -1,0 +1,27 @@
+{{define "tasks-body"}}
+<h1>任务</h1>
+<p class="tools"><a href="/tasks/board">看板</a> <a href="/tasks/new">新建</a></p>
+<form class="stack" method="get" action="/tasks">
+<label><input type="checkbox" name="mine" value="1" {{if .Task.Mine}}checked{{end}}>只看我的</label>
+<label>类型<select name="kind"><option value="">全部</option>{{range .Task.Kinds}}<option value="{{.}}" {{if eq . $.Task.Kind}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>状态<select name="status"><option value="">全部</option>{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}</select></label>
+<label>排序<select name="sort">
+<option value="due" {{if or (eq $.Task.Sort "") (eq $.Task.Sort "due")}}selected{{end}}>截止日期</option>
+<option value="updated" {{if eq $.Task.Sort "updated"}}selected{{end}}>最近更新</option>
+<option value="priority" {{if eq $.Task.Sort "priority"}}selected{{end}}>优先级</option>
+</select></label>
+<button type="submit">筛选</button>
+</form>
+{{if .Task.Tasks}}
+{{range .Task.Tasks}}
+<article>
+<p><a href="/tasks/{{.ID}}">{{.Title}}</a> {{taskStatus .Status}} · {{taskPriority .Priority}}</p>
+<p>{{.Kind}} · {{.OwnerName}}{{if .DueText}} · 截止 {{.DueText}}{{end}}{{if .EventTitle}} · <a href="/events/{{.EventID}}">{{.EventTitle}}</a>{{end}}</p>
+</article>
+{{end}}
+<p>共 {{.Task.Total}} 条
+{{if gt .Task.Page 1}}<a href="{{.Task.ListHref .Task.Prev}}">上一页</a>{{end}}
+{{if .Task.HasNext}}<a href="{{.Task.ListHref .Task.Next}}">下一页</a>{{end}}
+</p>
+{{else}}<p>没有任务.</p>{{end}}
+{{end}}

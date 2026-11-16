@@ -1,0 +1,32 @@
+{{define "task-body"}}
+<h1>{{.Task.Task.Title}}</h1>
+<p class="tools"><a href="/tasks">列表</a> <a href="/tasks/board">看板</a> {{if .Task.CanEdit}}<a href="/tasks/{{.Task.Task.ID}}/edit">编辑</a>{{end}}</p>
+<p>{{.Task.Task.Kind}} · {{taskStatus .Task.Task.Status}} · {{taskPriority .Task.Task.Priority}}</p>
+<p>负责人: {{.Task.Task.OwnerName}}</p>
+{{if .Task.Task.DueText}}<p>截止: {{.Task.Task.DueText}}</p>{{end}}
+{{if .Task.Task.EventID}}<p>活动: <a href="/events/{{.Task.Task.EventID}}">{{.Task.Task.EventTitle}}</a></p>{{end}}
+{{if .Task.Task.People}}<p>参与: {{range .Task.Task.People}}{{.Name}} {{end}}</p>{{end}}
+{{if .Task.Task.Items}}<p>器材: {{range .Task.Task.Items}}<a href="/inventory/items/{{.ID}}">{{.Code}} {{.Name}}</a> {{end}}</p>{{end}}
+{{if .Task.Task.Body}}<div class="doc">{{.Task.BodyHTML}}</div>{{end}}
+{{if .Task.CanEdit}}
+<form method="post" action="/tasks/{{.Task.Task.ID}}/status">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+{{if ne .Task.Task.Status "todo"}}<button type="submit" name="status" value="todo">待办</button>{{end}}
+{{if ne .Task.Task.Status "doing"}}<button type="submit" name="status" value="doing">进行中</button>{{end}}
+{{if ne .Task.Task.Status "done"}}<button type="submit" name="status" value="done">完成</button>{{end}}
+{{if ne .Task.Task.Status "cancelled"}}<button type="submit" name="status" value="cancelled">取消</button>{{end}}
+</form>
+{{end}}
+<h2>评论</h2>
+{{range .Task.Notes}}
+<article>
+<p>{{.Author}} {{time8 .At}}</p>
+<div class="doc">{{.HTML}}</div>
+</article>
+{{else}}<p>还没有评论.</p>{{end}}
+<form class="stack" method="post" action="/tasks/{{.Task.Task.ID}}/comments">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>评论<textarea name="body" rows="4" required></textarea></label>
+<button type="submit">发送</button>
+</form>
+{{end}}

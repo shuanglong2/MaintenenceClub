@@ -1,0 +1,22 @@
+{{define "task-form-body"}}
+<h1>{{.Title}}</h1>
+<form class="stack" method="post" action="{{if .Editing}}/tasks/{{.Task.Task.ID}}{{else}}/tasks{{end}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>标题<input name="title" value="{{.Task.Task.Title}}" required maxlength="80"></label>
+<label>类型<select name="kind">{{range .Task.Kinds}}<option value="{{.}}" {{if eq . $.Task.Task.Kind}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>状态<select name="status">{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}</select></label>
+<label>优先级<select name="priority">{{range .Task.Priorities}}<option value="{{.}}" {{if eq . $.Task.Task.Priority}}selected{{end}}>{{taskPriority .}}</option>{{end}}</select></label>
+<label>负责人<select name="owner">{{range .Task.People}}<option value="{{.ID}}" {{if eq .ID $.Task.Task.OwnerID}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
+<label>截止日期<input type="date" name="due" value="{{.Task.Task.DueText}}"></label>
+<label>关联活动编号<input name="event" inputmode="numeric" value="{{if .Task.Task.EventID}}{{.Task.Task.EventID}}{{end}}"></label>
+{{if .Task.Task.EventTitle}}<p><a href="/events/{{.Task.Task.EventID}}">{{.Task.Task.EventTitle}}</a></p>{{end}}
+<label>说明<textarea name="body" rows="8">{{.Task.Task.Body}}</textarea></label>
+<fieldset><legend>参与人</legend>
+{{range .Task.People}}<label><input type="checkbox" name="person" value="{{.ID}}" {{if .On}}checked{{end}}>{{.Label}}</label>{{end}}
+</fieldset>
+<fieldset><legend>器材</legend>
+{{range .Task.Items}}<label><input type="checkbox" name="item" value="{{.ID}}" {{if .On}}checked{{end}}>{{.Label}}</label>{{else}}<p>还没有器材.</p>{{end}}
+</fieldset>
+<button type="submit">保存</button>
+</form>
+{{end}}

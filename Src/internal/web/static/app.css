@@ -219,6 +219,34 @@ mark {
   display: none;
 }
 
+.board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.board section,
+.board article {
+  background: #fff;
+}
+
+.board section {
+  padding: 0.6rem;
+}
+
+.board article {
+  margin-top: 0.6rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid #d5d8de;
+}
+
+.board form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 @media (max-width: 720px) {
   .cal {
     display: none;
@@ -226,6 +254,10 @@ mark {
 
   .day-list {
     display: block;
+  }
+
+  .board {
+    grid-template-columns: 1fr;
   }
 }
 

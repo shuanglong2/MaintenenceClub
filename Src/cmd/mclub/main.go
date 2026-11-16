@@ -21,6 +21,7 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/db"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/migrate"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/web"
 )
 
@@ -102,12 +103,14 @@ func cmdServe() error {
 	inv := inventory.New(pool, store)
 	web.RegisterInventoryWidget(inv)
 	eventSvc := events.New(pool, store)
+	taskSvc := tasks.New(pool)
 	go cleanUploads(ctx, store)
 	handler, err := web.New(pool, assets, web.Option{
 		People:       svc,
 		Docs:         docSvc,
 		Inventory:    inv,
 		Events:       eventSvc,
+		Tasks:        taskSvc,
 		WeekStart:    cfg.WeekStart,
 		Secure:       cfg.CookieSecure,
 		TrustedProxy: cfg.TrustedProxy,
@@ -164,6 +167,7 @@ func modules() []migrate.Module {
 		{Name: "docs", FS: docs.SQL},
 		{Name: "inventory", FS: inventory.SQL},
 		{Name: "events", FS: events.SQL},
+		{Name: "tasks", FS: tasks.SQL},
 	}
 }
 

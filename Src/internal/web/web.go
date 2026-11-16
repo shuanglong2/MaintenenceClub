@@ -22,6 +22,7 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
 )
 
 // Pinger 是健康检查需要的数据库能力.
@@ -99,6 +100,7 @@ type page struct {
 	Doc        docView
 	Inv        invView
 	Evt        eventView
+	Task       taskView
 }
 
 type userView struct {
@@ -113,6 +115,7 @@ type server struct {
 	docs      *docs.Service
 	inv       *inventory.Service
 	events    *events.Service
+	tasks     *tasks.Service
 	weekStart time.Weekday
 	secure    bool
 	proxy     string
@@ -125,6 +128,7 @@ type Option struct {
 	Docs         *docs.Service
 	Inventory    *inventory.Service
 	Events       *events.Service
+	Tasks        *tasks.Service
 	WeekStart    time.Weekday
 	Secure       bool
 	TrustedProxy string
@@ -133,21 +137,23 @@ type Option struct {
 // New 组装路由和中间件.
 func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 	tpl := template.New("").Funcs(template.FuncMap{
-		"static":      assets.URL,
-		"time8":       formatTime,
-		"yuan":        formatYuan,
-		"add":         func(a, b int) int { return a + b },
-		"stateLabel":  inventory.StateLabel,
-		"kindLabel":   inventory.KindLabel,
-		"statusLabel": events.StatusLabel,
-		"whenLabel":   events.WhenLabel,
+		"static":       assets.URL,
+		"time8":        formatTime,
+		"yuan":         formatYuan,
+		"add":          func(a, b int) int { return a + b },
+		"stateLabel":   inventory.StateLabel,
+		"kindLabel":    inventory.KindLabel,
+		"statusLabel":  events.StatusLabel,
+		"whenLabel":    events.WhenLabel,
+		"taskStatus":   tasks.StatusLabel,
+		"taskPriority": tasks.PriorityLabel,
 	})
 	tpl, err := tpl.ParseFS(assets.fsys, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
 	s := &server{
-		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events,
+		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks,
 		weekStart: opt.WeekStart, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl,
 	}
 	mux := http.NewServeMux()
@@ -244,6 +250,15 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /events/{id}/copy", s.eventsCopy)
 	mux.HandleFunc("POST /events/{id}", s.eventsUpdate)
 	mux.HandleFunc("GET /events/{id}", s.eventsShow)
+	mux.HandleFunc("GET /tasks", s.tasksList)
+	mux.HandleFunc("GET /tasks/board", s.tasksBoard)
+	mux.HandleFunc("GET /tasks/new", s.tasksNew)
+	mux.HandleFunc("POST /tasks", s.tasksCreate)
+	mux.HandleFunc("GET /tasks/{id}/edit", s.tasksEdit)
+	mux.HandleFunc("POST /tasks/{id}/status", s.tasksStatus)
+	mux.HandleFunc("POST /tasks/{id}/comments", s.tasksComment)
+	mux.HandleFunc("POST /tasks/{id}", s.tasksUpdate)
+	mux.HandleFunc("GET /tasks/{id}", s.tasksShow)
 	mux.HandleFunc("/", s.notFound)
 }
 
@@ -281,6 +296,19 @@ func (s *server) render(w http.ResponseWriter, r *http.Request, status int, data
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
+	_, _ = w.Write(buf.Bytes())
+}
+
+func (s *server) renderPart(w http.ResponseWriter, r *http.Request, name string, data page) {
+	s.fill(r, &data)
+	var buf bytes.Buffer
+	if err := s.tpl.ExecuteTemplate(&buf, name, data); err != nil {
+		slog.Error("渲染片段", "err", err, "body", name)
+		http.Error(w, "内部错误", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(buf.Bytes())
 }
 

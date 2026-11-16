@@ -1,0 +1,31 @@
+{{define "tasks-board-body"}}
+<h1>看板</h1>
+<p class="tools"><a href="/tasks">列表</a> <a href="/tasks/new">新建</a></p>
+{{template "board-body" .}}
+{{end}}
+
+{{define "board-body"}}
+<div id="board" class="board">
+{{range .Task.Columns}}
+<section>
+<h2>{{taskStatus .Status}}</h2>
+{{range .Cards}}
+<article>
+<p><a href="/tasks/{{.ID}}">{{.Title}}</a></p>
+<p>{{taskPriority .Priority}} · {{.OwnerName}}{{if .DueText}} · {{.DueText}}{{end}}</p>
+{{if .CanEdit}}
+<form method="post" action="/tasks/{{.ID}}/status" hx-post="/tasks/{{.ID}}/status" hx-target="#board" hx-swap="outerHTML">
+<input type="hidden" name="csrf" value="{{$.CSRF}}">
+<input type="hidden" name="back" value="board">
+{{if ne .Status "todo"}}<button type="submit" name="status" value="todo">待办</button>{{end}}
+{{if ne .Status "doing"}}<button type="submit" name="status" value="doing">进行中</button>{{end}}
+{{if ne .Status "done"}}<button type="submit" name="status" value="done">完成</button>{{end}}
+{{if ne .Status "cancelled"}}<button type="submit" name="status" value="cancelled">取消</button>{{end}}
+</form>
+{{end}}
+</article>
+{{else}}<p>没有任务.</p>{{end}}
+</section>
+{{end}}
+</div>
+{{end}}
