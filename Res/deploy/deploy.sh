@@ -50,12 +50,7 @@ if ! runuser -u mclub -- pg_dump -Fc -d mclub -f "${root}/backups/db/pre-${ver}.
   echo "数据库备份失败, 继续发布" >&2
 fi
 
-set -a
-# shellcheck disable=SC1091
-. /etc/mclub/mclub.env
-set +a
-runuser -u mclub --preserve-env=MCLUB_ENV,MCLUB_ADDR,MCLUB_DB,MCLUB_DATA,MCLUB_UPLOAD_QUOTA_MB,MCLUB_COOKIE_SECURE,MCLUB_TRUSTED_PROXY -- \
-  "$dest/mclub" migrate
+runuser -u mclub -- bash -c 'set -a; . /etc/mclub/mclub.env; set +a; exec "$1" migrate' -- "$dest/mclub"
 
 prev=""
 if [ -L "${root}/app" ]; then

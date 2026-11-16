@@ -8,11 +8,6 @@ on:
     paths-ignore:
       - "Docs/**"
   workflow_dispatch:
-    inputs:
-      upx:
-        description: "使用 UPX 压缩"
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -28,7 +23,6 @@ env:
   GOCACHE: ${{ github.workspace }}/.gocache
   GOMODCACHE: ${{ github.workspace }}/.gomodcache
   GOPROXY: https://proxy.golang.org,direct
-  UPX_ENABLE: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.upx == 'true' && '1' || '0') || '1' }}
 
 jobs:
   build:
@@ -138,13 +132,6 @@ jobs:
             exit 1
           fi
 
-      - name: 安装 UPX
-        run: |
-          curl -fsSL -o "${RUNNER_TEMP}/upx.tar.xz" \
-            "https://github.com/upx/upx/releases/download/v5.3.0/upx-5.3.0-amd64_linux.tar.xz"
-          tar -xJf "${RUNNER_TEMP}/upx.tar.xz" -C "${RUNNER_TEMP}"
-          echo "${RUNNER_TEMP}/upx-5.3.0-amd64_linux" >> "${GITHUB_PATH}"
-
       - name: 编译 linux-x64 与 win-x64
         run: |
           built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -152,14 +139,13 @@ jobs:
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             version="${GITHUB_REF_NAME}"
           fi
-          ldflags="-s -w -buildid= -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Version=${version} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Built=${built}"
+          meta="-X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Version=${version} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Built=${built}"
           mkdir -p Publish/linux-x64 Publish/win-x64
-          GOOS=linux GOARCH=amd64 go build -trimpath \
-            -gcflags="all=-dwarf=false" \
-            -ldflags="${ldflags}" \
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags="${meta}" \
             -o Publish/linux-x64/mclub ./Src/cmd/mclub
           GOOS=windows GOARCH=amd64 go build -trimpath \
-            -ldflags="${ldflags}" \
+            -ldflags="-s -w -buildid= ${meta}" \
             -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
 
       - name: 检查编译结果
@@ -170,40 +156,15 @@ jobs:
           file Publish/win-x64/mclub.exe
           go version -m Publish/linux-x64/mclub | tee "${RUNNER_TEMP}/linux-version.txt" | grep -q "GOAMD64=v1"
           go version -m Publish/win-x64/mclub.exe | grep -q "GOAMD64=v1"
-          if readelf -S Publish/linux-x64/mclub | grep -E "debug_info|debug_line|zdebug"; then
-            echo "Linux 二进制仍含调试段"
-            exit 1
-          fi
-
-      - name: UPX LZMA 压缩
-        run: |
-          echo "压缩前:"
-          ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe | tee "${RUNNER_TEMP}/size-before.txt"
-          if [ "${UPX_ENABLE}" != "1" ]; then
-            echo "UPX_ENABLE=${UPX_ENABLE}, 跳过压缩"
-            exit 0
-          fi
-          upx --lzma --best Publish/linux-x64/mclub
-          upx --lzma --best Publish/win-x64/mclub.exe
-          upx -t Publish/linux-x64/mclub
-          upx -t Publish/win-x64/mclub.exe
-          echo "压缩后:"
-          upx -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
+          ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe | tee "${RUNNER_TEMP}/size.txt"
 
       - name: 记录体积
         run: |
           {
             echo "### 编译结果"
             echo ""
-            echo "UPX_ENABLE=${UPX_ENABLE}"
-            echo ""
-            echo "压缩前:"
             echo '```'
-            cat "${RUNNER_TEMP}/size-before.txt"
-            echo '```'
-            echo "压缩后:"
-            echo '```'
-            ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
+            cat "${RUNNER_TEMP}/size.txt"
             echo '```'
             echo "构建信息:"
             echo '```'

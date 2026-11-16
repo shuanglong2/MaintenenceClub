@@ -13,3 +13,6 @@
 *.exe
 *.test
 *.out
+
+cred.env
+cred.env.txt

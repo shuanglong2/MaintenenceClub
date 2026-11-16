@@ -39,29 +39,17 @@ jobs:
           restore-keys: |
             go-${{ runner.os }}-
 
-      - name: 安装 UPX
-        run: |
-          curl -fsSL -o "${RUNNER_TEMP}/upx.tar.xz" \
-            "https://github.com/upx/upx/releases/download/v5.3.0/upx-5.3.0-amd64_linux.tar.xz"
-          tar -xJf "${RUNNER_TEMP}/upx.tar.xz" -C "${RUNNER_TEMP}"
-          echo "${RUNNER_TEMP}/upx-5.3.0-amd64_linux" >> "${GITHUB_PATH}"
-
-      - name: 编译并压缩
+      - name: 编译
         run: |
           built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          ldflags="-s -w -buildid= -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Version=${GITHUB_REF_NAME} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Built=${built}"
+          meta="-X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Version=${GITHUB_REF_NAME} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Built=${built}"
           mkdir -p Publish/linux-x64 Publish/win-x64
-          GOOS=linux GOARCH=amd64 go build -trimpath \
-            -gcflags="all=-dwarf=false" \
-            -ldflags="${ldflags}" \
+          GOOS=linux GOARCH=amd64 go build \
+            -ldflags="${meta}" \
             -o Publish/linux-x64/mclub ./Src/cmd/mclub
           GOOS=windows GOARCH=amd64 go build -trimpath \
-            -ldflags="${ldflags}" \
+            -ldflags="-s -w -buildid= ${meta}" \
             -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
-          upx --lzma --best Publish/linux-x64/mclub
-          upx --lzma --best Publish/win-x64/mclub.exe
-          upx -t Publish/linux-x64/mclub
-          upx -t Publish/win-x64/mclub.exe
 
       - name: 发布
         env:
