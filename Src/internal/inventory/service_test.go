@@ -190,7 +190,7 @@ func TestConcurrentUse(t *testing.T) {
 	}
 	var wg sync.WaitGroup
 	var mu sync.Mutex
-	okN, failN int
+	var okN, failN int
 	for range 2 {
 		wg.Add(1)
 		go func() {
