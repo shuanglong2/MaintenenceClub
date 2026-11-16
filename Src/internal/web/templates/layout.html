@@ -1,0 +1,15 @@
+{{define "layout"}}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}}</title>
+<link rel="stylesheet" href="{{static "app.css"}}">
+</head>
+<body>
+<header class="top"><a href="/">维修组</a></header>
+<main>{{template .Body .}}</main>
+<script src="{{static "htmx.min.js"}}"></script>
+</body>
+</html>
+{{end}}

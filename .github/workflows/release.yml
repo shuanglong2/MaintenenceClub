@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  CGO_ENABLED: "0"
+  GOAMD64: v1
+  GOCACHE: ${{ github.workspace }}/.gocache
+  GOMODCACHE: ${{ github.workspace }}/.gomodcache
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出
+        uses: actions/checkout@v7
+
+      - name: 安装 Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: 缓存模块与构建
+        uses: actions/cache@v6
+        with:
+          path: |
+            .gomodcache
+            .gocache
+          key: go-${{ runner.os }}-${{ hashFiles('go.sum', 'go.mod') }}
+          restore-keys: |
+            go-${{ runner.os }}-
+
+      - name: 安装 UPX
+        run: |
+          curl -fsSL -o "${RUNNER_TEMP}/upx.tar.xz" \
+            "https://github.com/upx/upx/releases/download/v5.3.0/upx-5.3.0-amd64_linux.tar.xz"
+          tar -xJf "${RUNNER_TEMP}/upx.tar.xz" -C "${RUNNER_TEMP}"
+          echo "${RUNNER_TEMP}/upx-5.3.0-amd64_linux" >> "${GITHUB_PATH}"
+
+      - name: 编译并压缩
+        run: |
+          built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          ldflags="-s -w -buildid= -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Version=${GITHUB_REF_NAME} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Built=${built}"
+          mkdir -p Publish/linux-x64 Publish/win-x64
+          GOOS=linux GOARCH=amd64 go build -trimpath \
+            -gcflags="all=-dwarf=false" \
+            -ldflags="${ldflags}" \
+            -o Publish/linux-x64/mclub ./Src/cmd/mclub
+          GOOS=windows GOARCH=amd64 go build -trimpath \
+            -ldflags="${ldflags}" \
+            -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
+          upx --lzma --best Publish/linux-x64/mclub
+          upx --lzma --best Publish/win-x64/mclub.exe
+          upx -t Publish/linux-x64/mclub
+          upx -t Publish/win-x64/mclub.exe
+
+      - name: 发布
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dist="${RUNNER_TEMP}/dist"
+          mkdir -p "$dist"
+          cp Publish/linux-x64/mclub "$dist/mclub-linux-x64"
+          cp Publish/win-x64/mclub.exe "$dist/mclub-win-x64.exe"
+          (
+            cd "$dist"
+            sha256sum mclub-linux-x64 mclub-win-x64.exe > SHA256SUMS
+          )
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes \
+            "$dist/mclub-linux-x64" \
+            "$dist/mclub-win-x64.exe" \
+            "$dist/SHA256SUMS"

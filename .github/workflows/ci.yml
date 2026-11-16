@@ -8,6 +8,11 @@ on:
     paths-ignore:
       - "Docs/**"
   workflow_dispatch:
+    inputs:
+      upx:
+        description: "使用 UPX 压缩"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -23,11 +28,28 @@ env:
   GOCACHE: ${{ github.workspace }}/.gocache
   GOMODCACHE: ${{ github.workspace }}/.gomodcache
   GOPROXY: https://proxy.golang.org,direct
+  UPX_ENABLE: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.upx == 'true' && '1' || '0') || '1' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: mclub
+          POSTGRES_PASSWORD: mclub
+          POSTGRES_DB: mclub
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mclub -d mclub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      MCLUB_TEST_DSN: postgres://mclub:mclub@127.0.0.1:5432/mclub?sslmode=disable
     steps:
       - name: 检出
         uses: actions/checkout@v7
@@ -95,8 +117,26 @@ jobs:
           git status --porcelain -- go.mod go.sum
           exit 1
 
+      - name: 检查代码
+        run: go vet ./...
+
       - name: 测试
         run: go test ./...
+
+      - name: 竞态测试
+        env:
+          CGO_ENABLED: "1"
+        run: go test -race ./...
+
+      - name: staticcheck
+        run: |
+          mkdir -p .bin
+          GOBIN="${GITHUB_WORKSPACE}/.bin" go install honnef.co/go/tools/cmd/staticcheck@v0.8.2
+          .bin/staticcheck ./...
+          if [ -n "$(git status --porcelain -- go.mod go.sum)" ]; then
+            echo "staticcheck 改动了模块文件"
+            exit 1
+          fi
 
       - name: 安装 UPX
         run: |
@@ -107,12 +147,20 @@ jobs:
 
       - name: 编译 linux-x64 与 win-x64
         run: |
+          built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          version="dev"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME}"
+          fi
+          ldflags="-s -w -buildid= -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Version=${version} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Commit=${GITHUB_SHA} -X github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo.Built=${built}"
           mkdir -p Publish/linux-x64 Publish/win-x64
           GOOS=linux GOARCH=amd64 go build -trimpath \
             -gcflags="all=-dwarf=false" \
-            -ldflags="-s -w -buildid=" \
+            -ldflags="${ldflags}" \
             -o Publish/linux-x64/mclub ./Src/cmd/mclub
-          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
+          GOOS=windows GOARCH=amd64 go build -trimpath \
+            -ldflags="${ldflags}" \
+            -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
 
       - name: 检查编译结果
         run: |
@@ -120,7 +168,7 @@ jobs:
           test -f Publish/win-x64/mclub.exe
           file Publish/linux-x64/mclub
           file Publish/win-x64/mclub.exe
-          go version -m Publish/linux-x64/mclub | grep -q "GOAMD64=v1"
+          go version -m Publish/linux-x64/mclub | tee "${RUNNER_TEMP}/linux-version.txt" | grep -q "GOAMD64=v1"
           go version -m Publish/win-x64/mclub.exe | grep -q "GOAMD64=v1"
           if readelf -S Publish/linux-x64/mclub | grep -E "debug_info|debug_line|zdebug"; then
             echo "Linux 二进制仍含调试段"
@@ -130,13 +178,70 @@ jobs:
       - name: UPX LZMA 压缩
         run: |
           echo "压缩前:"
-          ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
+          ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe | tee "${RUNNER_TEMP}/size-before.txt"
+          if [ "${UPX_ENABLE}" != "1" ]; then
+            echo "UPX_ENABLE=${UPX_ENABLE}, 跳过压缩"
+            exit 0
+          fi
           upx --lzma --best Publish/linux-x64/mclub
           upx --lzma --best Publish/win-x64/mclub.exe
           upx -t Publish/linux-x64/mclub
           upx -t Publish/win-x64/mclub.exe
           echo "压缩后:"
           upx -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
+
+      - name: 记录体积
+        run: |
+          {
+            echo "### 编译结果"
+            echo ""
+            echo "UPX_ENABLE=${UPX_ENABLE}"
+            echo ""
+            echo "压缩前:"
+            echo '```'
+            cat "${RUNNER_TEMP}/size-before.txt"
+            echo '```'
+            echo "压缩后:"
+            echo '```'
+            ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
+            echo '```'
+            echo "构建信息:"
+            echo '```'
+            cat "${RUNNER_TEMP}/linux-version.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 冒烟
+        run: |
+          set -eu
+          export MCLUB_ADDR=127.0.0.1:18080
+          export MCLUB_DB="${MCLUB_TEST_DSN}"
+          export MCLUB_DATA="${RUNNER_TEMP}/uploads"
+          bin="Publish/linux-x64/mclub"
+          "$bin" version
+          "$bin" migrate
+          "$bin" migrate
+          "$bin" serve > "${RUNNER_TEMP}/mclub.log" 2>&1 &
+          pid=$!
+          trap 'kill "$pid" >/dev/null 2>&1 || true' EXIT
+          ok=0
+          for _ in $(seq 1 100); do
+            if curl -fsS "http://127.0.0.1:18080/healthz" | grep -q '"database":"ok"'; then
+              ok=1
+              break
+            fi
+            sleep 0.2
+          done
+          if [ "$ok" != 1 ]; then
+            echo "健康检查失败"
+            cat "${RUNNER_TEMP}/mclub.log"
+            exit 1
+          fi
+          curl -fsS "http://127.0.0.1:18080/" | grep -q "维修组"
+          code="$(curl -sS -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/missing")"
+          test "$code" = "404"
+          kill "$pid"
+          wait "$pid" || true
 
       - name: 上传编译结果
         uses: actions/upload-artifact@v7

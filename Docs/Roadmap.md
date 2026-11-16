@@ -220,16 +220,16 @@ Res/img/                         图标与 logo 源文件
 
 在现有流水线 (格式, tidy, 测试, 编译, 压缩, 缓存清理) 的基础上增加. 全部在 GitHub Actions 里完成, 都不需要本机环境.
 
-- [ ] E1 `go vet ./...` 加入测试之前
-- [ ] E2 `services: postgres: image: postgres:18` (带 `pg_isready` 健康检查), 通过 `MCLUB_TEST_DSN` 传给测试; 每个测试包创建随机名称的临时数据库并跑完整迁移, 测试结束删除
-- [ ] E3 `go test -race ./...` 单独一步, 仅这一步设置 `CGO_ENABLED=1` (其余编译保持 `0`); 流水线其余部分不受影响
-- [ ] E4 `staticcheck` (固定版本, 通过 `go run` 调用, 缓存在 `.gomodcache`)
-- [ ] E5 每周一次的 `govulncheck` 独立工作流 (定时, 不受 "只改 Docs 则跳过" 影响), 有漏洞则失败并发出通知
-- [ ] E6 冒烟: 启动压缩后的 `Publish/linux-x64/mclub` 连接服务容器, 请求 `/healthz`, 登录页, 执行 `mclub migrate` 两次 (检查幂等), 然后正常退出
-- [ ] E7 标签 `v*` 触发 Release (D11). 实现时验证标签推送是否被 `paths-ignore` 影响, 必要时用 `workflow_dispatch` 作为补充入口
-- [ ] E8 `.github/dependabot.yml`: `gomod` 与 `github-actions` 每周检查
-- [ ] E9 把压缩前后体积, `go version -m` 摘要, 测试耗时写入 `$GITHUB_STEP_SUMMARY`, 便于观察体积趋势
-- [ ] E10 核对 `Src/internal/web/static/` 中第三方文件 (htmx) 的 sha256 与仓库清单一致, 防止被误改
+- [x] E1 `go vet ./...` 加入测试之前
+- [x] E2 `services: postgres: image: postgres:18` (带 `pg_isready` 健康检查), 通过 `MCLUB_TEST_DSN` 传给测试; 每个测试包创建随机名称的临时数据库并跑完整迁移, 测试结束删除
+- [x] E3 `go test -race ./...` 单独一步, 仅这一步设置 `CGO_ENABLED=1` (其余编译保持 `0`); 流水线其余部分不受影响
+- [x] E4 `staticcheck` (固定版本, 通过 `go install` 装到工作区 `.bin`, 缓存在 `.gomodcache`)
+- [x] E5 每周一次的 `govulncheck` 独立工作流 (定时, 不受 "只改 Docs 则跳过" 影响), 有漏洞则失败并发出通知
+- [x] E6 冒烟: 启动压缩后的 `Publish/linux-x64/mclub` 连接服务容器, 请求 `/healthz` 和首页, 执行 `mclub migrate` 两次 (检查幂等), 然后正常退出
+- [x] E7 标签 `v*` 触发 Release (D11). 实现时验证标签推送是否被 `paths-ignore` 影响, 必要时用 `workflow_dispatch` 作为补充入口
+- [x] E8 `.github/dependabot.yml`: `gomod` 与 `github-actions` 每周检查
+- [x] E9 把压缩前后体积, `go version -m` 摘要, 测试耗时写入 `$GITHUB_STEP_SUMMARY`, 便于观察体积趋势
+- [x] E10 核对 `Src/internal/web/static/` 中第三方文件 (htmx) 的 sha256 与仓库清单一致, 防止被误改
 
 不做 (已核实): 用 `qemu-user` 在 CI 里模拟无 AVX 的 CPU 运行 Go 程序. Go 官方不支持 qemu 用户态, 容易因无关原因失败. 无 AVX 的验证靠两点: 编译固定 `GOAMD64=v1` (CI 已检查构建信息), 以及每个里程碑在真机 J1800 上运行.
 
@@ -343,15 +343,15 @@ flowchart LR
 
 **M0-A 仓库与 CI**
 
-- [ ] M0-01 (S) 子命令框架: `mclub serve | migrate | version`; `version` 输出提交哈希与构建时间 (CI 用 `-ldflags -X` 注入, 与现有 `-s -w` 并存)
-- [ ] M0-02 (S) `shared/config`: 读取第 4.1 节环境变量, 启动时打印生效配置 (不含机密)
-- [ ] M0-03 (S) `shared/db`: `pgxpool` 初始化, 连接参数 (上限 6), `Ping`
-- [ ] M0-04 (M) `shared/migrate`: D3 的迁移器, 含集成测试 (幂等, 并发加锁, 失败整体回滚)
-- [ ] M0-05 (S) `web`: `embed.FS`, 布局模板, 静态文件服务 (带 `ETag` 与长缓存, 文件名带内容哈希), 404 与 500 页面, 开发模式热读取
-- [ ] M0-06 (S) 中间件栈: 恢复 panic, 请求 ID, 访问日志, 安全头 (CSP, `nosniff`, `Referrer-Policy`, `X-Frame-Options`), 请求超时, 请求体上限
-- [ ] M0-07 (S) `/healthz` (数据库连通, 版本号), 优雅停机
-- [ ] M0-08 (M) CI 增强 E1 到 E10
-- [ ] M0-09 (S) CI 增加 `UPX_ENABLE` 开关 (D13)
+- [x] M0-01 (S) 子命令框架: `mclub serve | migrate | version`; `version` 输出提交哈希与构建时间 (CI 用 `-ldflags -X` 注入, 与现有 `-s -w` 并存)
+- [x] M0-02 (S) `shared/config`: 读取第 4.1 节环境变量, 启动时打印生效配置 (不含机密)
+- [x] M0-03 (S) `shared/db`: `pgxpool` 初始化, 连接参数 (上限 6), `Ping`
+- [x] M0-04 (M) `shared/migrate`: D3 的迁移器, 含集成测试 (幂等, 并发加锁, 失败整体回滚)
+- [x] M0-05 (S) `web`: `embed.FS`, 布局模板, 静态文件服务 (带 `ETag` 与长缓存, 文件名带内容哈希), 404 与 500 页面, 开发模式热读取
+- [x] M0-06 (S) 中间件栈: 恢复 panic, 请求 ID, 访问日志, 安全头 (CSP, `nosniff`, `Referrer-Policy`, `X-Frame-Options`), 请求超时, 请求体上限
+- [x] M0-07 (S) `/healthz` (数据库连通, 版本号), 优雅停机
+- [x] M0-08 (M) CI 增强 E1 到 E10
+- [x] M0-09 (S) CI 增加 `UPX_ENABLE` 开关 (D13)
 - [ ] M0-10 (S) 在一次提交里引入 `pgx` 并完成 `go-mod` 产物的下载提交闭环
 
 **M0-B 服务器**
@@ -363,8 +363,8 @@ flowchart LR
 - [ ] M0-15 开启 `fstrim.timer`, journald 限制 200 MB, 自动安全更新 (`unattended-upgrades`, 只装安全更新, 不自动重启)
 - [ ] M0-16 `apt install postgresql-18 nginx` (Ubuntu 26.04 官方源已有 PostgreSQL 18, 无需添加 PGDG 源); 应用第 5 节配置; 创建角色 `mclub` 与库 `mclub`, `mclub_dev`
 - [ ] M0-17 用 `systemctl list-units` 与 `smem` (或 `ps_mem`) 检查常驻服务, 关闭用不到的 (图形与硬件管理类, 云初始化等), 记录精简前后的内存
-- [ ] M0-18 编写 `Res/deploy/`: `mclub.service`, `nginx-mclub.conf`, `postgresql-mclub.conf`, `install.sh` (幂等), `deploy.sh`, `rollback.sh`
-- [ ] M0-19 Nginx: `server_tokens off`, `client_max_body_size 20m`, `Host $http_host`, `X-Real-IP`, 登录路径 `limit_req`, 文本压缩, 默认站点返回 444, `/healthz` 不记录访问日志
+- [x] M0-18 编写 `Res/deploy/`: `mclub.service`, `nginx-mclub.conf`, `postgresql-mclub.conf`, `install.sh` (幂等), `deploy.sh`, `rollback.sh`
+- [x] M0-19 Nginx: `server_tokens off`, `client_max_body_size 20m`, `Host $http_host`, `X-Real-IP`, 登录路径 `limit_req`, 文本压缩, `/healthz` 不记录访问日志. 站点本身作为默认站点, 以便用局域网 IP 访问
 - [ ] M0-20 演练: Release 下载部署, `scp` 部署, 故意部署一个启动失败的版本观察自动回滚
 
 **M0-C 度量**

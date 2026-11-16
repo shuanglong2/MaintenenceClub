@@ -1,0 +1,25 @@
+[Unit]
+Description=维修组
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=mclub
+Group=mclub
+Environment=GOMEMLIMIT=120MiB
+Environment=GOMAXPROCS=2
+EnvironmentFile=/etc/mclub/mclub.env
+WorkingDirectory=/srv/maintclub
+ExecStart=/srv/maintclub/app/mclub serve
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/srv/maintclub/uploads /srv/maintclub/backups
+MemoryMax=300M
+
+[Install]
+WantedBy=multi-user.target

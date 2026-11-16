@@ -3,6 +3,7 @@
 ## Unreleased
 
 - 新增 `Docs/Roadmap.md`: 在核实 Ubuntu 26.04, PostgreSQL 18, Go 标准库 CSRF, UPX, 中文检索等前提后, 把 Plan1 展开为 M0 到 M8 的任务清单, 并列出对 Plan1 的修订建议.
+- M0 骨架: `serve`, `migrate`, `version`, 配置, 迁移器, 页面和健康检查. CI 增加 PostgreSQL 18, vet, race, staticcheck, 冒烟和 UPX 开关. 标签发布与每周漏洞检查, 以及 `Res/deploy` 安装脚本.
 
 ## 0.1.0 - 2026-11-16
 

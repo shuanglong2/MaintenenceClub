@@ -1,5 +1,6 @@
 /.gocache/
 /.gomodcache/
+/.bin/
 
 /Publish/*
 !/Publish/linux-x64/

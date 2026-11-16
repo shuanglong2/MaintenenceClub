@@ -14,8 +14,9 @@ alwaysApply: true
 1. 只缓存 `.gomodcache` 和 `.gocache`. 构建成功后删除当前 key 以外的 Actions 缓存
 2. `gofmt -l Src`, 有差异就失败并打印 diff
 3. `go mod tidy`. `go.mod` 或 `go.sum` 发生变化时, 上传 artifact `go-mod` 并失败. 下载该产物后再提交, 不在本机生成
-4. `go test ./...`
-5. `CGO_ENABLED=0` 且 `GOAMD64=v1`. Linux 保持编译器默认的全优化, 并使用 `-trimpath`, `-dwarf=false`, `-ldflags "-s -w -buildid="`. 两个平台再用 `upx --lzma --best` 压缩, 写入 `Publish` 后上传 artifact
+4. `go vet` 与 `staticcheck`, 以及带 PostgreSQL 18 的 `go test ./...`. 另一步 `go test -race`, 只有这一步 `CGO_ENABLED=1`
+5. `CGO_ENABLED=0` 且 `GOAMD64=v1`. Linux 保持编译器默认的全优化, 并使用 `-trimpath`, `-dwarf=false`, `-ldflags "-s -w -buildid="`. 两个平台再用 `upx --lzma --best` 压缩, 可用 `UPX_ENABLE=0` 跳过. 压缩后的 Linux 二进制要做冒烟, 再把 `Publish` 上传为 artifact
+6. 推送 `v*` 标签时发布 GitHub Release. 每周跑一次 `govulncheck`. Dependabot 检查 Go 模块和 Actions
 
 每个对话结束前要有一次 git 提交, 说明写清原因. 使用本机已有的 git 用户. 不要把 Cursor 写成作者, 提交者或 `Co-authored-by`. 不要修改 git config.
 

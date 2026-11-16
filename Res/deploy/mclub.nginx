@@ -1,0 +1,26 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    server_tokens off;
+    client_max_body_size 20m;
+    gzip on;
+    gzip_types text/css application/javascript application/json text/plain;
+
+    location /login {
+        limit_req zone=mclub_login burst=10 nodelay;
+        proxy_pass http://127.0.0.1:8080;
+        include /etc/nginx/snippets/mclub-proxy.conf;
+    }
+
+    location = /healthz {
+        access_log off;
+        proxy_pass http://127.0.0.1:8080;
+        include /etc/nginx/snippets/mclub-proxy.conf;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        include /etc/nginx/snippets/mclub-proxy.conf;
+    }
+}

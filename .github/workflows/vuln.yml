@@ -1,0 +1,35 @@
+name: 漏洞检查
+
+on:
+  schedule:
+    - cron: "0 18 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CGO_ENABLED: "0"
+  GOCACHE: ${{ github.workspace }}/.gocache
+  GOMODCACHE: ${{ github.workspace }}/.gomodcache
+  GOPROXY: https://proxy.golang.org,direct
+
+jobs:
+  vuln:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出
+        uses: actions/checkout@v7
+
+      - name: 安装 Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: govulncheck
+        run: |
+          mkdir -p .bin
+          GOBIN="${GITHUB_WORKSPACE}/.bin" go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+          .bin/govulncheck ./...
