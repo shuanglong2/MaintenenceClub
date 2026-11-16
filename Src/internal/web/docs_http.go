@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"html/template"
@@ -12,10 +13,27 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/search"
 )
+
+// RegisterDocsWidget 把最近文档修改登记到首页. 仅管理层的页面不会出现在组员首页.
+func RegisterDocsWidget(svc *docs.Service) {
+	if svc == nil {
+		return
+	}
+	RegisterWidget(Widget{
+		Title: "最近文档修改",
+		Allow: func(user people.User) bool {
+			return people.Can(user, people.ActDocsEdit, people.Resource{})
+		},
+		Render: func(ctx context.Context, user people.User) (template.HTML, error) {
+			return svc.HomeRecentHTML(ctx, docs.Actor{ID: user.ID, Role: user.Role, Active: user.Active})
+		},
+	})
+}
 
 type docView struct {
 	Tree       []docs.FolderNode

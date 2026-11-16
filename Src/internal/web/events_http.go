@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"errors"
 	"html/template"
 	"net/http"
@@ -8,9 +9,26 @@ import (
 	"time"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
 )
+
+// RegisterEventWidget 把近期活动登记到首页.
+func RegisterEventWidget(svc *events.Service) {
+	if svc == nil {
+		return
+	}
+	RegisterWidget(Widget{
+		Title: "近期活动",
+		Allow: func(user people.User) bool {
+			return people.Can(user, people.ActEventJoin, people.Resource{})
+		},
+		Render: func(ctx context.Context, user people.User) (template.HTML, error) {
+			return svc.HomeUpcomingHTML(ctx, events.Actor{ID: user.ID, Role: user.Role, Active: user.Active})
+		},
+	})
+}
 
 type eventView struct {
 	Event       events.Event

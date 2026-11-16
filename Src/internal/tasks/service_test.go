@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -121,5 +122,28 @@ func TestTaskFlow(t *testing.T) {
 	board, err := svc.Board(ctx, memberActor)
 	if err != nil || len(board) != 4 {
 		t.Fatal(err, len(board))
+	}
+	if _, err := svc.Create(ctx, memberActor, Draft{Title: "已做完", Kind: "其他", Status: statusDone, OwnerID: memberActor.ID}); err != nil {
+		t.Fatal(err)
+	}
+	soon := dateOnly(time.Now().AddDate(0, 0, 2))
+	far := dateOnly(time.Now().AddDate(0, 0, 40))
+	if _, err := svc.Create(ctx, memberActor, Draft{Title: "快到期", Kind: "其他", OwnerID: memberActor.ID, Due: &soon}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(ctx, memberActor, Draft{Title: "很远", Kind: "其他", OwnerID: memberActor.ID, Due: &far}); err != nil {
+		t.Fatal(err)
+	}
+	openHTML, err := svc.HomeOpenHTML(ctx, memberActor)
+	if err != nil || !strings.Contains(string(openHTML), "整理台面") || !strings.Contains(string(openHTML), "交给组员了") || strings.Contains(string(openHTML), "已做完") || strings.Contains(string(openHTML), "组长的任务") {
+		t.Fatalf("组员首页 %v %s", err, openHTML)
+	}
+	leadHTML, err := svc.HomeOpenHTML(ctx, leaderActor)
+	if err != nil || !strings.Contains(string(leadHTML), "组长的任务") || !strings.Contains(string(leadHTML), "交给组员了") || strings.Contains(string(leadHTML), "整理台面") {
+		t.Fatalf("组长首页 %v %s", err, leadHTML)
+	}
+	dueHTML, err := svc.HomeDueHTML(ctx, memberActor)
+	if err != nil || !strings.Contains(string(dueHTML), "快到期") || strings.Contains(string(dueHTML), "很远") {
+		t.Fatalf("即将到期 %v %s", err, dueHTML)
 	}
 }

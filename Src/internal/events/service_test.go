@@ -151,4 +151,8 @@ func TestEventFlow(t *testing.T) {
 	if err != nil || ok {
 		t.Fatal(err, ok)
 	}
+	upcoming, err := svc.HomeUpcomingHTML(ctx, memberActor)
+	if err != nil || !strings.Contains(string(upcoming), "即将例会") || !strings.Contains(string(upcoming), "已截止") || strings.Contains(string(upcoming), "跨日例会") || strings.Contains(string(upcoming), "保养日") {
+		t.Fatalf("近期活动 %v %s", err, upcoming)
+	}
 }

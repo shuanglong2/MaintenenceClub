@@ -116,6 +116,14 @@ func TestDocsFlow(t *testing.T) {
 	if err != nil || len(history) < 2 {
 		t.Fatalf("%+v %v", history, err)
 	}
+	memberHome, err := svc.HomeRecentHTML(ctx, memberActor)
+	if err != nil || !strings.Contains(string(memberHome), "示波器") || strings.Contains(string(memberHome), "内部约定") {
+		t.Fatalf("组员文档 %v %s", err, memberHome)
+	}
+	leaderHome, err := svc.HomeRecentHTML(ctx, leaderActor)
+	if err != nil || !strings.Contains(string(leaderHome), "内部约定") || !strings.Contains(string(leaderHome), "示波器") {
+		t.Fatalf("组长文档 %v %s", err, leaderHome)
+	}
 	if err := svc.Void(ctx, leaderActor, hidden.Page.ID, "过期"); err != nil {
 		t.Fatal(err)
 	}

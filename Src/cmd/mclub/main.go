@@ -101,9 +101,12 @@ func cmdServe() error {
 		slog.Warn("写入说明文档失败", "err", err)
 	}
 	inv := inventory.New(pool, store)
-	web.RegisterInventoryWidget(inv)
 	eventSvc := events.New(pool, store)
 	taskSvc := tasks.New(pool)
+	web.RegisterTaskWidgets(taskSvc)
+	web.RegisterEventWidget(eventSvc)
+	web.RegisterInventoryWidget(inv)
+	web.RegisterDocsWidget(docSvc)
 	go cleanUploads(ctx, store)
 	handler, err := web.New(pool, assets, web.Option{
 		People:       svc,

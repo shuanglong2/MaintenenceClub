@@ -528,27 +528,49 @@ LIMIT $1`, limit)
 	return s.loadMany(ctx, ids)
 }
 
-// LowStockHTML 是首页组件用的一小段列表.
+// LowStockHTML 是首页组件用的一小段列表, 只查一次, 最多 5 条.
 func (s *Service) LowStockHTML(ctx context.Context) (template.HTML, error) {
-	items, err := s.LowStock(ctx, 8)
+	rows, err := s.pool.Query(ctx, `
+SELECT i.id, i.name, i.unit, coalesce(sum(m.qty), 0)::int
+FROM inventory.items i
+LEFT JOIN inventory.movements m ON m.item_id = i.id
+WHERE i.voided_at IS NULL AND NOT i.tracked AND i.min_qty > 0
+GROUP BY i.id
+HAVING coalesce(sum(m.qty), 0) < i.min_qty
+ORDER BY i.name, i.id
+LIMIT 5`)
 	if err != nil {
 		return "", err
 	}
-	if len(items) == 0 {
-		return `<p class="empty">没有低于最低库存的物品.</p>`, nil
-	}
+	defer rows.Close()
 	var b strings.Builder
-	b.WriteString("<ul>")
-	for _, item := range items {
+	n := 0
+	for rows.Next() {
+		var id int64
+		var name, unit string
+		var qty int
+		if err := rows.Scan(&id, &name, &unit, &qty); err != nil {
+			return "", err
+		}
+		if n == 0 {
+			b.WriteString("<ul>")
+		}
+		n++
 		b.WriteString(`<li><a href="/inventory/items/`)
-		b.WriteString(strconv.FormatInt(item.ID, 10))
+		b.WriteString(strconv.FormatInt(id, 10))
 		b.WriteString(`">`)
-		b.WriteString(html.EscapeString(item.Name))
+		b.WriteString(html.EscapeString(name))
 		b.WriteString("</a> ")
-		b.WriteString(strconv.Itoa(item.Qty))
+		b.WriteString(strconv.Itoa(qty))
 		b.WriteString(" ")
-		b.WriteString(html.EscapeString(item.Unit))
+		b.WriteString(html.EscapeString(unit))
 		b.WriteString("</li>")
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if n == 0 {
+		return `<p class="empty">没有低于最低库存的物品.</p>`, nil
 	}
 	b.WriteString("</ul>")
 	return template.HTML(b.String()), nil

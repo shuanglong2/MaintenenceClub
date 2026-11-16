@@ -10,9 +10,37 @@ import (
 	"time"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
 )
+
+// RegisterTaskWidgets 把未完成和即将到期登记到首页. 每人只看自己负责, 创建或参与的.
+func RegisterTaskWidgets(svc *tasks.Service) {
+	if svc == nil {
+		return
+	}
+	allow := func(user people.User) bool {
+		return people.Can(user, people.ActTaskCreate, people.Resource{})
+	}
+	actor := func(user people.User) tasks.Actor {
+		return tasks.Actor{ID: user.ID, Role: user.Role, Active: user.Active}
+	}
+	RegisterWidget(Widget{
+		Title: "我的未完成任务",
+		Allow: allow,
+		Render: func(ctx context.Context, user people.User) (template.HTML, error) {
+			return svc.HomeOpenHTML(ctx, actor(user))
+		},
+	})
+	RegisterWidget(Widget{
+		Title: "即将到期",
+		Allow: allow,
+		Render: func(ctx context.Context, user people.User) (template.HTML, error) {
+			return svc.HomeDueHTML(ctx, actor(user))
+		},
+	})
+}
 
 type taskNote struct {
 	Author string

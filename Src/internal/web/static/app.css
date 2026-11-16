@@ -128,6 +128,22 @@ dl div {
   color: #555;
 }
 
+.widget {
+  background: #fff;
+  padding: 0.6rem 0.8rem;
+  margin: 0.75rem 0;
+}
+
+.widget h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.4rem;
+}
+
+.widget ul {
+  margin: 0.2rem 0 0;
+  padding-left: 1.2rem;
+}
+
 .tools {
   display: flex;
   flex-wrap: wrap;
