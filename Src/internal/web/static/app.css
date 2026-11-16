@@ -179,6 +179,56 @@ mark {
   font-size: 2rem;
 }
 
+.cal {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 1px;
+  background: #d5d8de;
+}
+
+.cal-head,
+.cal-day {
+  background: #fff;
+  padding: 0.35rem;
+  min-height: 4.5rem;
+}
+
+.cal-head {
+  font-weight: 600;
+  min-height: 0;
+  background: #e8eef6;
+}
+
+.cal-day a {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-date {
+  color: #5c6570;
+  font-size: 0.85rem;
+}
+
+.muted {
+  opacity: 0.45;
+}
+
+.day-list {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .cal {
+    display: none;
+  }
+
+  .day-list {
+    display: block;
+  }
+}
+
 @media print {
   .top,
   .tools,

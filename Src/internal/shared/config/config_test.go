@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoadDefaults(t *testing.T) {
 	for _, key := range []string{
@@ -12,6 +15,7 @@ func TestLoadDefaults(t *testing.T) {
 		"MCLUB_COOKIE_SECURE",
 		"MCLUB_DEV_ASSETS",
 		"MCLUB_TRUSTED_PROXY",
+		"MCLUB_WEEK_START",
 	} {
 		t.Setenv(key, "")
 	}
@@ -22,8 +26,20 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.Env != "prod" || cfg.Addr != "127.0.0.1:8080" || cfg.UploadQuotaMB != 6144 {
 		t.Fatalf("%+v", cfg)
 	}
-	if cfg.CookieSecure || cfg.DevAssets != "" || cfg.TrustedProxy != "127.0.0.1" {
+	if cfg.CookieSecure || cfg.DevAssets != "" || cfg.TrustedProxy != "127.0.0.1" || cfg.WeekStart != time.Monday {
 		t.Fatalf("%+v", cfg)
+	}
+}
+
+func TestLoadWeekStart(t *testing.T) {
+	t.Setenv("MCLUB_WEEK_START", "sunday")
+	cfg, err := Load()
+	if err != nil || cfg.WeekStart != time.Sunday {
+		t.Fatal(err, cfg.WeekStart)
+	}
+	t.Setenv("MCLUB_WEEK_START", "friday")
+	if _, err := Load(); err == nil {
+		t.Fatal("应拒绝未知的周起始")
 	}
 }
 

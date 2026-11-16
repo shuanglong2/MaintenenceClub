@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Config 是进程启动后不再改变的配置.
@@ -19,6 +20,7 @@ type Config struct {
 	CookieSecure  bool
 	DevAssets     string
 	TrustedProxy  string
+	WeekStart     time.Weekday
 }
 
 // Load 读取环境变量. 空值使用默认, 非法值返回错误.
@@ -53,6 +55,14 @@ func Load() (Config, error) {
 	cfg.TrustedProxy = envStr("MCLUB_TRUSTED_PROXY", "127.0.0.1")
 	if ip := net.ParseIP(cfg.TrustedProxy); ip == nil {
 		return Config{}, fmt.Errorf("MCLUB_TRUSTED_PROXY 必须是 IP 地址")
+	}
+	switch envStr("MCLUB_WEEK_START", "monday") {
+	case "monday":
+		cfg.WeekStart = time.Monday
+	case "sunday":
+		cfg.WeekStart = time.Sunday
+	default:
+		return Config{}, fmt.Errorf("MCLUB_WEEK_START 只能是 monday 或 sunday")
 	}
 	return cfg, nil
 }

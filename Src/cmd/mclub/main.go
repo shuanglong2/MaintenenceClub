@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/audit"
@@ -100,9 +101,16 @@ func cmdServe() error {
 	}
 	inv := inventory.New(pool, store)
 	web.RegisterInventoryWidget(inv)
+	eventSvc := events.New(pool, store)
 	go cleanUploads(ctx, store)
 	handler, err := web.New(pool, assets, web.Option{
-		People: svc, Docs: docSvc, Inventory: inv, Secure: cfg.CookieSecure, TrustedProxy: cfg.TrustedProxy,
+		People:       svc,
+		Docs:         docSvc,
+		Inventory:    inv,
+		Events:       eventSvc,
+		WeekStart:    cfg.WeekStart,
+		Secure:       cfg.CookieSecure,
+		TrustedProxy: cfg.TrustedProxy,
 	})
 	if err != nil {
 		return err
@@ -155,6 +163,7 @@ func modules() []migrate.Module {
 		{Name: "files", FS: files.SQL},
 		{Name: "docs", FS: docs.SQL},
 		{Name: "inventory", FS: inventory.SQL},
+		{Name: "events", FS: events.SQL},
 	}
 }
 

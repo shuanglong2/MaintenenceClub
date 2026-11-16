@@ -1,0 +1,45 @@
+{{define "event-body"}}
+<h1>{{.Evt.Event.Title}}</h1>
+<p class="tools"><a href="/events">月历</a> {{if .Evt.Manage}}<a href="/events/{{.Evt.Event.ID}}/edit">编辑</a>{{end}}</p>
+<p>{{.Evt.Event.Kind}} · {{statusLabel .Evt.Event.Status}} · {{whenLabel .Evt.Event}}</p>
+{{if .Evt.Event.Place}}<p>地点: {{.Evt.Event.Place}}</p>{{end}}
+<p>负责人: {{.Evt.Event.OwnerName}}</p>
+{{if .Evt.Event.SignupText}}<p>报名截止: {{.Evt.Event.SignupText}}</p>{{else}}<p>报名截止: 开始前</p>{{end}}
+{{if .Evt.BodyHTML}}<div class="doc">{{.Evt.BodyHTML}}</div>{{end}}
+{{if .Evt.Open}}
+{{if .Evt.Joined}}
+{{if not .Evt.SelfChecked}}<form method="post" action="/events/{{.Evt.Event.ID}}/cancel"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">取消报名</button></form>{{end}}
+{{else}}<form method="post" action="/events/{{.Evt.Event.ID}}/signup"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">报名</button></form>{{end}}
+{{end}}
+<h2>报名</h2>
+{{if .Evt.Event.Attendees}}
+<ul>
+{{range .Evt.Event.Attendees}}
+<li>{{.Name}} {{if .Checked}}已签到 {{.CheckedName}} {{time8 .CheckedAt}}{{else}}未签到{{end}}
+{{if $.Evt.CanCheck}}
+<form method="post" action="/events/{{$.Evt.Event.ID}}/check"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="person" value="{{.PersonID}}">{{if .Checked}}<button type="submit" name="on" value="0">取消签到</button>{{else}}<button type="submit" name="on" value="1">签到</button>{{end}}</form>
+{{end}}
+</li>
+{{end}}
+</ul>
+{{else}}<p>还没有人报名.</p>{{end}}
+{{if .Evt.SummaryHTML}}<h2>总结</h2><div class="doc">{{.Evt.SummaryHTML}}</div>{{end}}
+{{if .Evt.Manage}}
+<form class="stack" method="post" action="/events/{{.Evt.Event.ID}}/summary">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>总结<textarea name="summary" rows="8">{{.Evt.Event.Summary}}</textarea></label>
+<button type="submit">保存总结</button>
+</form>
+<h2>附件</h2>
+{{if .Evt.Event.Files}}<ul>{{range .Evt.Event.Files}}<li><a href="/files/{{.ID}}">{{.Name}}</a>
+<form method="post" action="/events/{{$.Evt.Event.ID}}/files/remove"><input type="hidden" name="csrf" value="{{$.CSRF}}"><input type="hidden" name="file" value="{{.ID}}"><button type="submit">移除</button></form></li>{{end}}</ul>{{end}}
+<form method="post" action="/events/{{.Evt.Event.ID}}/files" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>图片或 PDF<input type="file" name="file" required></label>
+<button type="submit">上传</button>
+</form>
+<form method="post" action="/events/{{.Evt.Event.ID}}/copy"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">复制到下一周</button></form>
+{{else}}
+{{if .Evt.Event.Files}}<h2>附件</h2><ul>{{range .Evt.Event.Files}}<li><a href="/files/{{.ID}}">{{.Name}}</a></li>{{end}}</ul>{{end}}
+{{end}}
+{{end}}

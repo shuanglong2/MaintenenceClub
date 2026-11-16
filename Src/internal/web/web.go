@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
@@ -97,6 +98,7 @@ type page struct {
 	HasNext    bool
 	Doc        docView
 	Inv        invView
+	Evt        eventView
 }
 
 type userView struct {
@@ -105,14 +107,16 @@ type userView struct {
 }
 
 type server struct {
-	assets *Assets
-	db     Pinger
-	people *people.Service
-	docs   *docs.Service
-	inv    *inventory.Service
-	secure bool
-	proxy  string
-	tpl    *template.Template
+	assets    *Assets
+	db        Pinger
+	people    *people.Service
+	docs      *docs.Service
+	inv       *inventory.Service
+	events    *events.Service
+	weekStart time.Weekday
+	secure    bool
+	proxy     string
+	tpl       *template.Template
 }
 
 // Option 是网站运行时需要的设置.
@@ -120,6 +124,8 @@ type Option struct {
 	People       *people.Service
 	Docs         *docs.Service
 	Inventory    *inventory.Service
+	Events       *events.Service
+	WeekStart    time.Weekday
 	Secure       bool
 	TrustedProxy string
 }
@@ -127,18 +133,23 @@ type Option struct {
 // New 组装路由和中间件.
 func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 	tpl := template.New("").Funcs(template.FuncMap{
-		"static":     assets.URL,
-		"time8":      formatTime,
-		"yuan":       formatYuan,
-		"add":        func(a, b int) int { return a + b },
-		"stateLabel": inventory.StateLabel,
-		"kindLabel":  inventory.KindLabel,
+		"static":      assets.URL,
+		"time8":       formatTime,
+		"yuan":        formatYuan,
+		"add":         func(a, b int) int { return a + b },
+		"stateLabel":  inventory.StateLabel,
+		"kindLabel":   inventory.KindLabel,
+		"statusLabel": events.StatusLabel,
+		"whenLabel":   events.WhenLabel,
 	})
 	tpl, err := tpl.ParseFS(assets.fsys, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
-	s := &server{assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl}
+	s := &server{
+		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events,
+		weekStart: opt.WeekStart, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl,
+	}
 	mux := http.NewServeMux()
 	s.routes(mux)
 	var handler http.Handler = mux
@@ -219,6 +230,20 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /inventory/stocktakes", s.stocktakeCreate)
 	mux.HandleFunc("POST /inventory/stocktakes/{id}", s.stocktakeSave)
 	mux.HandleFunc("GET /inventory/stocktakes/{id}", s.stocktakeShow)
+	mux.HandleFunc("GET /events", s.eventsMonth)
+	mux.HandleFunc("GET /events/list", s.eventsList)
+	mux.HandleFunc("GET /events/new", s.eventsNew)
+	mux.HandleFunc("POST /events", s.eventsCreate)
+	mux.HandleFunc("GET /events/{id}/edit", s.eventsEdit)
+	mux.HandleFunc("POST /events/{id}/signup", s.eventsSignup)
+	mux.HandleFunc("POST /events/{id}/cancel", s.eventsCancel)
+	mux.HandleFunc("POST /events/{id}/check", s.eventsCheck)
+	mux.HandleFunc("POST /events/{id}/summary", s.eventsSummary)
+	mux.HandleFunc("POST /events/{id}/files/remove", s.eventsDetach)
+	mux.HandleFunc("POST /events/{id}/files", s.eventsUpload)
+	mux.HandleFunc("POST /events/{id}/copy", s.eventsCopy)
+	mux.HandleFunc("POST /events/{id}", s.eventsUpdate)
+	mux.HandleFunc("GET /events/{id}", s.eventsShow)
 	mux.HandleFunc("/", s.notFound)
 }
 

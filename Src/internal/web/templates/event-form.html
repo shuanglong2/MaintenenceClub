@@ -1,0 +1,38 @@
+{{define "event-form-body"}}
+<h1>{{.Title}}</h1>
+<form class="stack" method="post" action="{{if .Editing}}/events/{{.Evt.Event.ID}}{{else}}/events{{end}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>标题<input name="title" value="{{.Evt.Event.Title}}" required></label>
+<label>类型
+<select name="kind">
+{{range .Evt.Kinds}}<option value="{{.}}" {{if eq . $.Evt.Event.Kind}}selected{{end}}>{{.}}</option>{{end}}
+</select>
+</label>
+<label>地点<input name="place" value="{{.Evt.Event.Place}}"></label>
+<label>负责人
+<select name="owner">
+{{range .Evt.People}}<option value="{{.ID}}" {{if eq .ID $.Evt.Event.OwnerID}}selected{{end}}>{{.Name}}</option>{{end}}
+</select>
+</label>
+<label class="check"><input type="checkbox" name="all_day" value="1" {{if .Evt.Event.AllDay}}checked{{end}}> 全天</label>
+<label>开始日期<input type="date" name="start_date" value="{{.Evt.Event.StartDate}}" required></label>
+<label>开始时间<input type="time" name="start_clock" value="{{.Evt.Event.StartClock}}"></label>
+<label>结束日期<input type="date" name="end_date" value="{{.Evt.Event.EndDate}}" required></label>
+<label>结束时间<input type="time" name="end_clock" value="{{.Evt.Event.EndClock}}"></label>
+<p class="hint">时间按北京时间填写. 全天活动只使用日期, 结束日期含当天.</p>
+<label>报名截止日期<input type="date" name="signup_date" value="{{.Evt.Event.SignupDate}}"></label>
+<label>报名截止时间<input type="time" name="signup_clock" value="{{.Evt.Event.SignupClock}}"></label>
+<p class="hint">留空表示开始前都可以报名.</p>
+{{if .Editing}}
+<label>状态
+<select name="status">
+<option value="planned" {{if eq .Evt.Event.Status "planned"}}selected{{end}}>计划中</option>
+<option value="done" {{if eq .Evt.Event.Status "done"}}selected{{end}}>已结束</option>
+<option value="cancelled" {{if eq .Evt.Event.Status "cancelled"}}selected{{end}}>已取消</option>
+</select>
+</label>
+{{end}}
+<label>说明<textarea name="body" rows="8">{{.Evt.Event.Body}}</textarea></label>
+<button type="submit">保存</button>
+</form>
+{{end}}

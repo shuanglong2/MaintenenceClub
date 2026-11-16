@@ -500,8 +500,11 @@ func (s *server) uploads() *files.Store {
 	if s.docs != nil && s.docs.Files() != nil {
 		return s.docs.Files()
 	}
-	if s.inv != nil {
+	if s.inv != nil && s.inv.Files() != nil {
 		return s.inv.Files()
+	}
+	if s.events != nil {
+		return s.events.Files()
 	}
 	return nil
 }

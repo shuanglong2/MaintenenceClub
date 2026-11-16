@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
@@ -521,6 +522,15 @@ func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
 		}, id)
 		if err != nil {
 			s.showInvErr(w, r, err)
+			return
+		}
+	}
+	if !allowed && s.events != nil {
+		allowed, err = s.events.CanSeeFile(r.Context(), events.Actor{
+			ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP,
+		}, id)
+		if err != nil {
+			s.showEventErr(w, r, err)
 			return
 		}
 	}
