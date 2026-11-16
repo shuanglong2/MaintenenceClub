@@ -98,10 +98,20 @@ jobs:
       - name: 测试
         run: go test ./...
 
+      - name: 安装 UPX
+        run: |
+          curl -fsSL -o "${RUNNER_TEMP}/upx.tar.xz" \
+            "https://github.com/upx/upx/releases/download/v5.3.0/upx-5.3.0-amd64_linux.tar.xz"
+          tar -xJf "${RUNNER_TEMP}/upx.tar.xz" -C "${RUNNER_TEMP}"
+          echo "${RUNNER_TEMP}/upx-5.3.0-amd64_linux" >> "${GITHUB_PATH}"
+
       - name: 编译 linux-x64 与 win-x64
         run: |
           mkdir -p Publish/linux-x64 Publish/win-x64
-          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o Publish/linux-x64/mclub ./Src/cmd/mclub
+          GOOS=linux GOARCH=amd64 go build -trimpath \
+            -gcflags="all=-dwarf=false" \
+            -ldflags="-s -w -buildid=" \
+            -o Publish/linux-x64/mclub ./Src/cmd/mclub
           GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o Publish/win-x64/mclub.exe ./Src/cmd/mclub
 
       - name: 检查编译结果
@@ -112,7 +122,21 @@ jobs:
           file Publish/win-x64/mclub.exe
           go version -m Publish/linux-x64/mclub | grep -q "GOAMD64=v1"
           go version -m Publish/win-x64/mclub.exe | grep -q "GOAMD64=v1"
-          find Publish -type f | sort
+          if readelf -S Publish/linux-x64/mclub | grep -E "debug_info|debug_line|zdebug"; then
+            echo "Linux 二进制仍含调试段"
+            exit 1
+          fi
+
+      - name: UPX LZMA 压缩
+        run: |
+          echo "压缩前:"
+          ls -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
+          upx --lzma --best Publish/linux-x64/mclub
+          upx --lzma --best Publish/win-x64/mclub.exe
+          upx -t Publish/linux-x64/mclub
+          upx -t Publish/win-x64/mclub.exe
+          echo "压缩后:"
+          upx -l Publish/linux-x64/mclub Publish/win-x64/mclub.exe
 
       - name: 上传编译结果
         uses: actions/upload-artifact@v7

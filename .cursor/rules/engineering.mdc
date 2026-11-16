@@ -15,7 +15,7 @@ alwaysApply: true
 2. `gofmt -l Src`, 有差异就失败并打印 diff
 3. `go mod tidy`. `go.mod` 或 `go.sum` 发生变化时, 上传 artifact `go-mod` 并失败. 下载该产物后再提交, 不在本机生成
 4. `go test ./...`
-5. `CGO_ENABLED=0` 且 `GOAMD64=v1`, 交叉编译 linux-x64 与 win-x64 到 `Publish`, 再上传 artifact
+5. `CGO_ENABLED=0` 且 `GOAMD64=v1`. Linux 保持编译器默认的全优化, 并使用 `-trimpath`, `-dwarf=false`, `-ldflags "-s -w -buildid="`. 两个平台再用 `upx --lzma --best` 压缩, 写入 `Publish` 后上传 artifact
 
 每个对话结束前要有一次 git 提交, 说明写清原因. 使用本机已有的 git 用户. 不要把 Cursor 写成作者, 提交者或 `Co-authored-by`. 不要修改 git config.
 

@@ -214,7 +214,7 @@ PostgreSQL 的数据目录放在系统默认位置, 不放进网站目录.
   2. `gofmt` 检查格式并输出差异
   3. `go mod tidy`. 若 `go.mod` 或 `go.sum` 有变化, 上传产物并失败, 下载后再提交
   4. `go test`
-  5. 交叉编译 linux-x64 与 win-x64, `CGO_ENABLED=0`, `GOAMD64=v1`, 写入 `Publish`
+  5. 交叉编译 linux-x64 与 win-x64, `CGO_ENABLED=0`, `GOAMD64=v1`. Linux 去掉调试信息并保持全优化, 两个平台再用 UPX LZMA 压缩, 写入 `Publish`
   6. 上传 `Publish` 为 artifact
 - 根目录说明只保留 `README.md` 和 `CHANGELOG.md`. 计划与技术文档放 `Docs`
 
