@@ -577,9 +577,9 @@ func (s *server) showDocErr(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, docs.ErrNotFound), errors.Is(err, files.ErrNotFound):
 		s.notFound(w, r)
 	case errors.Is(err, docs.ErrForbidden):
-		s.render(w, r, http.StatusForbidden, page{Title: "提示", Body: "error-body", Message: err.Error()})
+		s.render(w, r, http.StatusForbidden, page{Title: "提示", Body: "error-body", Status: http.StatusForbidden, Message: err.Error()})
 	case errors.Is(err, docs.ErrBadInput), errors.Is(err, files.ErrBadFile), errors.Is(err, files.ErrTooBig), errors.Is(err, files.ErrPixels), errors.Is(err, files.ErrQuota):
-		s.render(w, r, http.StatusBadRequest, page{Title: "提示", Body: "error-body", Message: err.Error()})
+		s.render(w, r, http.StatusBadRequest, page{Title: "提示", Body: "error-body", Status: http.StatusBadRequest, Message: err.Error()})
 	default:
 		s.internal(w, r, err)
 	}
