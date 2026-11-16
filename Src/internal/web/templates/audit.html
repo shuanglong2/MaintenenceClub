@@ -1,0 +1,24 @@
+{{define "audit-body"}}
+<h1>审计</h1>
+<form class="filters" method="get" action="/audit">
+<label>人员编号<input name="actor" value="{{.Filter.Actor}}"></label>
+<label>动作<input name="action" value="{{.Filter.Action}}"></label>
+<label>从<input type="date" name="from" value="{{.Filter.From}}"></label>
+<label>到<input type="date" name="to" value="{{.Filter.To}}"></label>
+<button type="submit">筛选</button>
+</form>
+{{if not .Audit}}<p class="empty">没有记录.</p>{{else}}
+<table>
+<thead><tr><th>时间</th><th>人员</th><th>动作</th><th>摘要</th></tr></thead>
+<tbody>
+{{range .Audit}}
+<tr><td>{{.At}}</td><td>{{.Actor}}</td><td>{{.Action}}</td><td>{{.Summary}}</td></tr>
+{{end}}
+</tbody>
+</table>
+<p class="tools">
+{{if .Offset}}<a href="/audit?offset={{.Prev}}&amp;actor={{.Filter.Actor}}&amp;action={{.Filter.Action}}&amp;from={{.Filter.From}}&amp;to={{.Filter.To}}">上一页</a>{{end}}
+{{if .HasNext}}<a href="/audit?offset={{add .Offset 50}}&amp;actor={{.Filter.Actor}}&amp;action={{.Filter.Action}}&amp;from={{.Filter.From}}&amp;to={{.Filter.To}}">下一页</a>{{end}}
+</p>
+{{end}}
+{{end}}

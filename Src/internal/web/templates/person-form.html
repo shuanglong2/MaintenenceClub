@@ -1,0 +1,23 @@
+{{define "person-form-body"}}
+<h1>{{.Title}}</h1>
+{{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="{{if .Editing}}/people/{{.Person.ID}}{{else}}/people{{end}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>姓名<input name="name" value="{{.Person.Name}}" required></label>
+{{if not .Editing}}<label>登录名<input name="login" value="{{.Person.Login}}" required></label>{{end}}
+<label>职务
+<select name="role">
+<option value="leader" {{if eq .Person.Role "leader"}}selected{{end}}>组长</option>
+<option value="deputy" {{if eq .Person.Role "deputy"}}selected{{end}}>副组长</option>
+<option value="member" {{if or (eq .Person.Role "member") (not .Editing)}}selected{{end}}>组员</option>
+</select>
+</label>
+<label class="check"><input type="checkbox" name="finance" value="1" {{if .Person.Finance}}checked{{end}}> 财务</label>
+<label>学号<input name="student_id" value="{{.Person.StudentID}}"></label>
+<label>联系方式<input name="contact" value="{{.Person.Contact}}"></label>
+<label>备注<textarea name="note" rows="3">{{.Person.Note}}</textarea></label>
+{{if not .Editing}}<label>初始密码<input name="password" type="password" autocomplete="new-password"><span class="hint">留空则自动生成, 只显示一次.</span></label>{{end}}
+<button type="submit">保存</button>
+</form>
+{{end}}

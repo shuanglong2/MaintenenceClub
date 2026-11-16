@@ -7,7 +7,19 @@
 <link rel="stylesheet" href="{{static "app.css"}}">
 </head>
 <body>
-<header class="top"><a href="/">维修组</a></header>
+<header class="top">
+<a class="brand" href="/">维修组</a>
+<nav>
+{{if .User}}
+{{if not .User.MustChange}}<a href="/people">人员</a>{{end}}
+{{if and .ShowAudit (not .User.MustChange)}}<a href="/audit">审计</a>{{end}}
+<a href="/account">我的</a>
+<form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">退出</button></form>
+{{else}}
+<a href="/login">登录</a>
+{{end}}
+</nav>
+</header>
 <main>{{.HTML}}</main>
 <script src="{{static "htmx.min.js"}}"></script>
 </body>

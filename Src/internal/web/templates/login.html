@@ -1,0 +1,10 @@
+{{define "login-body"}}
+<h1>登录</h1>
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="/login">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>登录名<input name="login" autocomplete="username" required></label>
+<label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+<button type="submit">登录</button>
+</form>
+{{end}}

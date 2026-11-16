@@ -46,8 +46,12 @@ install -m 0644 "$src/postgresql-mclub.conf" "$pgconf/90-mclub.conf"
 systemctl restart postgresql
 
 install -m 0644 "$src/mclub.service" /etc/systemd/system/mclub.service
+install -m 0755 "$src/backup.sh" /usr/local/sbin/mclub-backup
+install -m 0644 "$src/mclub-backup.service" /etc/systemd/system/mclub-backup.service
+install -m 0644 "$src/mclub-backup.timer" /etc/systemd/system/mclub-backup.timer
 systemctl daemon-reload
 systemctl enable mclub
+systemctl enable --now mclub-backup.timer
 
 install -d -m 0755 /etc/nginx/snippets
 install -m 0644 "$src/mclub-proxy.conf" /etc/nginx/snippets/mclub-proxy.conf

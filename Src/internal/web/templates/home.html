@@ -1,4 +1,11 @@
 {{define "home-body"}}
 <h1>维修组</h1>
+{{if .User}}
+<p>你好, {{.User.Name}}.</p>
+{{range .Widgets}}<section class="widget"><h2>{{.Title}}</h2>{{.HTML}}</section>{{end}}
+{{if not .Widgets}}<p class="empty">暂无汇总.</p>{{end}}
+{{else}}
 <p>内部站点已运行.</p>
+<p><a href="/login">登录</a></p>
+{{end}}
 {{end}}

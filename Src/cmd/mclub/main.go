@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/audit"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/config"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/db"
@@ -30,6 +32,8 @@ func main() {
 		err = cmdServe()
 	case "migrate":
 		err = cmdMigrate()
+	case "admin":
+		err = cmdAdmin(os.Args[2:])
 	case "version":
 		fmt.Printf("mclub %s %s %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.Built)
 	case "help", "-h", "--help":
@@ -46,9 +50,11 @@ func main() {
 
 func usage() {
 	fmt.Fprint(os.Stderr, `用法:
-  mclub serve      启动网站
-  mclub migrate    把数据库补到最新
-  mclub version    显示版本
+  mclub serve                         启动网站
+  mclub migrate                       把数据库补到最新
+  mclub version                       显示版本
+  mclub admin create <登录名>         创建首个组长, 密码从终端读取
+  mclub admin reset-password <登录名> 重置密码并打印一次
 `)
 }
 
@@ -80,7 +86,13 @@ func cmdServe() error {
 	if err != nil {
 		return err
 	}
-	handler, err := web.New(pool, assets)
+	svc, err := people.New(pool, people.ProdCost)
+	if err != nil {
+		return err
+	}
+	handler, err := web.New(pool, assets, web.Option{
+		People: svc, Secure: cfg.CookieSecure, TrustedProxy: cfg.TrustedProxy,
+	})
 	if err != nil {
 		return err
 	}
@@ -126,5 +138,8 @@ func cmdMigrate() error {
 
 // 模块顺序在这里固定. 后面的模块只能依赖前面的模块.
 func modules() []migrate.Module {
-	return nil
+	return []migrate.Module{
+		{Name: "audit", FS: audit.SQL},
+		{Name: "people", FS: people.SQL},
+	}
 }

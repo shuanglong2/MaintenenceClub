@@ -1,0 +1,34 @@
+{{define "person-body"}}
+<h1>{{.Person.Name}}</h1>
+{{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
+<dl>
+<div><dt>职务</dt><dd>{{.Person.RoleLabel}}</dd></div>
+<div><dt>状态</dt><dd>{{.Person.StatusLabel}}</dd></div>
+{{if .Person.Login}}<div><dt>登录名</dt><dd>{{.Person.Login}}</dd></div>{{end}}
+{{if .Person.ShowFinance}}<div><dt>财务</dt><dd>{{if .Person.Finance}}开{{else}}关{{end}}</dd></div>{{end}}
+{{if .Person.ShowSensitive}}
+<div><dt>学号</dt><dd>{{.Person.StudentID}}</dd></div>
+<div><dt>联系方式</dt><dd>{{.Person.Contact}}</dd></div>
+<div><dt>备注</dt><dd>{{.Person.Note}}</dd></div>
+{{end}}
+<div><dt>加入时间</dt><dd>{{time8 .Person.Joined}}</dd></div>
+</dl>
+{{if .Person.CanEdit}}
+<p class="tools"><a href="/people/{{.Person.ID}}/edit">编辑</a></p>
+<form method="post" action="/people/{{.Person.ID}}/reset-password">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<button type="submit">重置密码</button>
+</form>
+{{if eq .Person.Status "active"}}
+<form method="post" action="/people/{{.Person.ID}}/exit">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<button type="submit">退出</button>
+</form>
+{{else}}
+<form method="post" action="/people/{{.Person.ID}}/restore">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<button type="submit">恢复</button>
+</form>
+{{end}}
+{{end}}
+{{end}}

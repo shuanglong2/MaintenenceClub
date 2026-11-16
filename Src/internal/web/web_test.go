@@ -24,7 +24,7 @@ func newTestHandler(t *testing.T, db Pinger) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
-	handler, err := New(db, assets)
+	handler, err := New(db, assets, Option{})
 	if err != nil {
 		t.Fatal(err)
 	}

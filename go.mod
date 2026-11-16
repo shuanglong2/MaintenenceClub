@@ -2,7 +2,11 @@ module github.com/shuanglong2/MaintenenceClub
 
 go 1.27.4
 
-require github.com/jackc/pgx/v5 v5.13.0
+require (
+	github.com/jackc/pgx/v5 v5.13.0
+	golang.org/x/crypto v0.59.0
+	golang.org/x/term v0.48.0
+)
 
 require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect

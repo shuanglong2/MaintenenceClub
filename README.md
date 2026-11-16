@@ -24,12 +24,14 @@
 mclub serve
 mclub migrate
 mclub version
+mclub admin create <登录名>
+mclub admin reset-password <登录名>
 ```
 
-`serve` 默认监听 `127.0.0.1:8080`. `migrate` 把数据库补到最新, 重复执行是安全的. 环境变量见 `Res/deploy/mclub.env.example`.
+`serve` 默认监听 `127.0.0.1:8080`. `migrate` 把数据库补到最新, 重复执行是安全的. `admin create` 只在还没有人员时创建第一名组长, 密码从终端读取. 环境变量见 `Res/deploy/mclub.env.example`.
 
 ## 部署
 
-服务器上的安装, 发布和回滚脚本在 `Res/deploy`. 先在 J1800 上执行 `install.sh`, 再用 `deploy.sh <版本标签>` 或 `deploy.sh <本地二进制>` 发布. 发布前会备份数据库, 健康检查失败会切回上一版. 这一步还没有在真机上做过.
+服务器上的安装, 发布和回滚脚本在 `Res/deploy`. 先在 J1800 上执行 `install.sh`, 再用 `deploy.sh <版本标签>` 或 `deploy.sh <本地二进制>` 发布. 发布前会备份数据库, 健康检查失败会切回上一版. 每天 03:00 (Asia/Shanghai) 由 `mclub-backup.timer` 再备份一次, 保留 7 份.
 
 打 `v*` 标签后, Actions 把 `mclub-linux-x64`, `mclub-win-x64.exe` 和 `SHA256SUMS` 发到 GitHub Release.

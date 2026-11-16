@@ -1,0 +1,10 @@
+{{define "import-body"}}
+<h1>导入人员</h1>
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+<p>CSV 使用 UTF-8, 表头为 <code>姓名,登录名,角色</code>. 角色填写组长, 副组长或组员. 初始密码会在导入后下载一次.</p>
+<form class="stack" method="post" action="/people/import" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>文件<input type="file" name="file" accept=".csv,text/csv" required></label>
+<button type="submit">导入</button>
+</form>
+{{end}}

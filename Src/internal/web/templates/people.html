@@ -1,0 +1,19 @@
+{{define "people-body"}}
+<h1>人员</h1>
+{{if .ShowManage}}<p class="tools"><a href="/people/new">新建</a> <a href="/people/import">导入</a></p>{{end}}
+{{if not .People}}<p class="empty">还没有人员.</p>{{else}}
+<table>
+<thead><tr><th>姓名</th><th>职务</th><th>状态</th>{{if .ShowAudit}}<th>登录名</th>{{end}}</tr></thead>
+<tbody>
+{{range .People}}
+<tr>
+<td><a href="/people/{{.ID}}">{{.Name}}</a></td>
+<td>{{.RoleLabel}}</td>
+<td>{{.StatusLabel}}</td>
+{{if $.ShowAudit}}<td>{{.Login}}</td>{{end}}
+</tr>
+{{end}}
+</tbody>
+</table>
+{{end}}
+{{end}}

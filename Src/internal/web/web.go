@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
 )
 
@@ -71,35 +72,70 @@ func (a *Assets) URL(name string) string {
 }
 
 type page struct {
-	Title   string
-	Body    string
-	HTML    template.HTML
-	Status  int
-	Message string
+	Title      string
+	Body       string
+	HTML       template.HTML
+	Status     int
+	Message    string
+	Error      string
+	Notice     string
+	CSRF       string
+	User       *userView
+	ShowAudit  bool
+	ShowManage bool
+	People     []people.PersonView
+	Person     people.PersonView
+	HasPerson  bool
+	Editing    bool
+	Audit      []auditRow
+	Filter     auditFilter
+	Widgets    []widgetView
+	Offset     int
+	Prev       int
+	HasNext    bool
+}
+
+type userView struct {
+	Name       string
+	MustChange bool
 }
 
 type server struct {
 	assets *Assets
 	db     Pinger
+	people *people.Service
+	secure bool
+	proxy  string
 	tpl    *template.Template
 }
 
+// Option 是网站运行时需要的设置.
+type Option struct {
+	People       *people.Service
+	Secure       bool
+	TrustedProxy string
+}
+
 // New 组装路由和中间件.
-func New(db Pinger, assets *Assets) (http.Handler, error) {
+func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 	tpl := template.New("").Funcs(template.FuncMap{
 		"static": assets.URL,
+		"time8":  formatTime,
+		"yuan":   formatYuan,
+		"add":    func(a, b int) int { return a + b },
 	})
 	tpl, err := tpl.ParseFS(assets.fsys, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
-	s := &server{assets: assets, db: db, tpl: tpl}
+	s := &server{assets: assets, db: db, people: opt.People, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", s.home)
-	mux.HandleFunc("GET /healthz", s.healthz)
-	mux.HandleFunc("GET /static/{path...}", s.staticFile)
-	mux.HandleFunc("/", s.notFound)
+	s.routes(mux)
 	var handler http.Handler = mux
+	handler = s.gatePassword(handler)
+	handler = s.checkCSRF(handler)
+	handler = s.loadSession(handler)
+	handler = http.NewCrossOriginProtection().Handler(handler)
 	handler = limitBody(2<<20, handler)
 	handler = securityHeaders(handler)
 	handler = accessLog(handler)
@@ -108,12 +144,41 @@ func New(db Pinger, assets *Assets) (http.Handler, error) {
 	return handler, nil
 }
 
-func (s *server) home(w http.ResponseWriter, _ *http.Request) {
-	s.render(w, http.StatusOK, page{Title: "维修组", Body: "home-body"})
+func (s *server) routes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /{$}", s.home)
+	mux.HandleFunc("GET /healthz", s.healthz)
+	mux.HandleFunc("GET /static/{path...}", s.staticFile)
+	mux.HandleFunc("GET /login", s.loginForm)
+	mux.HandleFunc("POST /login", s.login)
+	mux.HandleFunc("POST /logout", s.logout)
+	mux.HandleFunc("GET /people", s.peopleList)
+	mux.HandleFunc("GET /people/new", s.peopleNew)
+	mux.HandleFunc("POST /people", s.peopleCreate)
+	mux.HandleFunc("GET /people/import", s.peopleImportForm)
+	mux.HandleFunc("POST /people/import", s.peopleImport)
+	mux.HandleFunc("GET /people/{id}", s.peopleDetail)
+	mux.HandleFunc("GET /people/{id}/edit", s.peopleEdit)
+	mux.HandleFunc("POST /people/{id}", s.peopleUpdate)
+	mux.HandleFunc("POST /people/{id}/exit", s.peopleExit)
+	mux.HandleFunc("POST /people/{id}/restore", s.peopleRestore)
+	mux.HandleFunc("POST /people/{id}/reset-password", s.peopleReset)
+	mux.HandleFunc("GET /account", s.account)
+	mux.HandleFunc("POST /account/password", s.accountPassword)
+	mux.HandleFunc("POST /account/contact", s.accountContact)
+	mux.HandleFunc("GET /audit", s.auditList)
+	mux.HandleFunc("/", s.notFound)
 }
 
-func (s *server) notFound(w http.ResponseWriter, _ *http.Request) {
-	s.render(w, http.StatusNotFound, page{
+func (s *server) home(w http.ResponseWriter, r *http.Request) {
+	data := page{Title: "维修组", Body: "home-body"}
+	if user, ok := visitorFrom(r); ok {
+		data.Widgets = renderWidgets(r.Context(), user.Session.User)
+	}
+	s.render(w, r, http.StatusOK, data)
+}
+
+func (s *server) notFound(w http.ResponseWriter, r *http.Request) {
+	s.render(w, r, http.StatusNotFound, page{
 		Title:   "未找到",
 		Body:    "error-body",
 		Status:  http.StatusNotFound,
@@ -121,7 +186,8 @@ func (s *server) notFound(w http.ResponseWriter, _ *http.Request) {
 	})
 }
 
-func (s *server) render(w http.ResponseWriter, status int, data page) {
+func (s *server) render(w http.ResponseWriter, r *http.Request, status int, data page) {
+	s.fill(r, &data)
 	var body bytes.Buffer
 	if err := s.tpl.ExecuteTemplate(&body, data.Body, data); err != nil {
 		slog.Error("渲染页面", "err", err, "body", data.Body)

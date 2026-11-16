@@ -1,0 +1,7 @@
+[Unit]
+Description=维修组数据库备份
+After=postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/mclub-backup

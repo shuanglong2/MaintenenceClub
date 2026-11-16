@@ -357,11 +357,11 @@ flowchart LR
 **M0-B 服务器**
 
 - [ ] M0-11 安装 Ubuntu Server 26.04 LTS (最小安装, 只装 SSH). 全盘 ext4, 不用 LVM 加密 (断电重启要能自动恢复). 创建 2 GB 交换文件
-- [ ] M0-12 **不要** 执行启用 `amd64v3` 架构变体的配置 (`APT::Architecture-Variants`), J1800 没有 AVX2, 开了会让软件包无法运行
+- [x] M0-12 **不要** 执行启用 `amd64v3` 架构变体的配置 (`APT::Architecture-Variants`), J1800 没有 AVX2, 开了会让软件包无法运行. 2026-11-16 已核对, 机器上没有这个配置
 - [ ] M0-13 固定 IP 或内网域名; SSH 只允许密钥登录; `ufw` 只开 22 与 80
 - [ ] M0-14 时间同步 (`systemd-timesyncd` 或 `chrony`): 审计日志依赖准确时间, 老主板电池可能没电
 - [ ] M0-15 开启 `fstrim.timer`, journald 限制 200 MB, 自动安全更新 (`unattended-upgrades`, 只装安全更新, 不自动重启)
-- [ ] M0-16 `apt install postgresql-18 nginx` (Ubuntu 26.04 官方源已有 PostgreSQL 18, 无需添加 PGDG 源); 应用第 5 节配置; 创建角色 `mclub` 与库 `mclub`, `mclub_dev`
+- [x] M0-16 `apt install postgresql-18 nginx` (Ubuntu 26.04 官方源已有 PostgreSQL 18, 无需添加 PGDG 源); 应用第 5 节配置; 创建角色 `mclub` 与库 `mclub`, `mclub_dev`. 沿用已安装的 PostgreSQL 18.6 与 Nginx 1.28.3, 没有另装版本
 - [ ] M0-17 用 `systemctl list-units` 与 `smem` (或 `ps_mem`) 检查常驻服务, 关闭用不到的 (图形与硬件管理类, 云初始化等), 记录精简前后的内存
 - [x] M0-18 编写 `Res/deploy/`: `mclub.service`, `nginx-mclub.conf`, `postgresql-mclub.conf`, `install.sh` (幂等), `deploy.sh`, `rollback.sh`
 - [x] M0-19 Nginx: `server_tokens off`, `client_max_body_size 20m`, `Host $http_host`, `X-Real-IP`, 登录路径 `limit_req`, 文本压缩, `/healthz` 不记录访问日志. 站点本身作为默认站点, 以便用局域网 IP 访问
@@ -370,7 +370,7 @@ flowchart LR
 **M0-C 度量**
 
 - [ ] M0-21 记录: 空闲时 `free -m`, 应用 RSS, PostgreSQL 总 RSS, 冷启动时间 (UPX 开 / 关), 页面响应时间 (手机 Wi-Fi). 填入第 11 节
-- [ ] M0-22 根据 D13 判定线决定 Linux 版是否继续 UPX
+- [x] M0-22 根据 D13 判定线决定 Linux 版是否继续 UPX. UPX 压缩后的二进制在这台 J1800 上段错误, Linux 与 Windows 都不再压缩
 
 验收:
 
@@ -387,28 +387,28 @@ flowchart LR
 
 **共用底座 (shared)**
 
-- [ ] M1-01 (M) 会话: 表 `people.sessions`, 登录, 退出, 滑动与绝对过期, 改密码撤销其他会话, 每次请求校验人员状态
-- [ ] M1-02 (S) CSRF: `CrossOriginProtection` 加会话令牌 (D5), 带测试
-- [ ] M1-03 (M) 授权: `authz.Can(user, 权限, 资源)`, 权限常量, 权限矩阵表驱动测试 (见 4.4)
-- [ ] M1-04 (M) 审计: `audit.events(id, at, actor_id, actor_name, ip, action, entity, entity_id, summary, detail jsonb)`, 在业务事务内写入; 触发器禁止改删; 敏感字段 (密码哈希, 联系方式明文) 不写入 `detail`
-- [ ] M1-05 (S) 登录限速 (应用内 `(登录名, IP)` 指数退避) 与 `X-Real-IP` 仅在来自可信代理时采纳
-- [ ] M1-06 (M) 模板函数与组件: 时间 (UTC+8), 金额 (分转元), 分页, 提示消息, 表单错误, 空状态, 手机端导航
-- [ ] M1-07 (S) 首页组件注册机制: 各模块在 `routes.go` 注册 "我的待办 / 近期活动 / 低库存 ..." 组件, 首页按权限渲染 (M4c 才逐个接入)
+- [x] M1-01 (M) 会话: 表 `people.sessions`, 登录, 退出, 滑动与绝对过期, 改密码撤销其他会话, 每次请求校验人员状态
+- [x] M1-02 (S) CSRF: `CrossOriginProtection` 加会话令牌 (D5), 带测试
+- [x] M1-03 (M) 授权: `authz.Can(user, 权限, 资源)`, 权限常量, 权限矩阵表驱动测试 (见 4.4)
+- [x] M1-04 (M) 审计: `audit.events(id, at, actor_id, actor_name, ip, action, entity, entity_id, summary, detail jsonb)`, 在业务事务内写入; 触发器禁止改删; 敏感字段 (密码哈希, 联系方式明文) 不写入 `detail`
+- [x] M1-05 (S) 登录限速 (应用内 `(登录名, IP)` 指数退避) 与 `X-Real-IP` 仅在来自可信代理时采纳
+- [x] M1-06 (M) 模板函数与组件: 时间 (UTC+8), 金额 (分转元), 分页, 提示消息, 表单错误, 空状态, 手机端导航
+- [x] M1-07 (S) 首页组件注册机制: 各模块在 `routes.go` 注册 "我的待办 / 近期活动 / 低库存 ..." 组件, 首页按权限渲染 (M4c 才逐个接入)
 
 **人员模块**
 
-- [ ] M1-08 (M) 表 `people.people`: 姓名, 登录名 (唯一, 小写), 密码哈希, 角色, 财务开关, 学号, 联系方式, 加入时间, 状态, 备注, 必须改密标志
-- [ ] M1-09 (M) 人员列表, 详情, 新建, 编辑; 退出与恢复; 重置密码 (生成一次性初始密码显示一次)
-- [ ] M1-10 (S) 字段可见性: 组员只能看到全员姓名与职务, 联系方式与学号仅管理层和本人可见 (在 service 层过滤, 不靠模板隐藏)
-- [ ] M1-11 (S) 不变量与换届: 在组的组长至少 1 人; 退出人员不能登录且立即失效; 单元测试覆盖 "先提拔后降级" 流程
-- [ ] M1-12 (S) 命令行: `mclub admin create <登录名>` (创建首个组长, 交互输入密码), `mclub admin reset-password <登录名>`
-- [ ] M1-13 (S) 个人资料页: 自己改密码, 改联系方式
-- [ ] M1-14 (S) 审计查看页: 组长全部, 副组长只读, 带按人员 / 动作 / 时间筛选
-- [ ] M1-15 (S) 人员 CSV 导入 (姓名, 登录名, 角色; 初始密码随机生成并一次性导出)
+- [x] M1-08 (M) 表 `people.people`: 姓名, 登录名 (唯一, 小写), 密码哈希, 角色, 财务开关, 学号, 联系方式, 加入时间, 状态, 备注, 必须改密标志
+- [x] M1-09 (M) 人员列表, 详情, 新建, 编辑; 退出与恢复; 重置密码 (生成一次性初始密码显示一次)
+- [x] M1-10 (S) 字段可见性: 组员只能看到全员姓名与职务, 联系方式与学号仅管理层和本人可见 (在 service 层过滤, 不靠模板隐藏)
+- [x] M1-11 (S) 不变量与换届: 在组的组长至少 1 人; 退出人员不能登录且立即失效; 单元测试覆盖 "先提拔后降级" 流程
+- [x] M1-12 (S) 命令行: `mclub admin create <登录名>` (创建首个组长, 交互输入密码), `mclub admin reset-password <登录名>`
+- [x] M1-13 (S) 个人资料页: 自己改密码, 改联系方式
+- [x] M1-14 (S) 审计查看页: 组长全部, 副组长只读, 带按人员 / 动作 / 时间筛选
+- [x] M1-15 (S) 人员 CSV 导入 (姓名, 登录名, 角色; 初始密码随机生成并一次性导出)
 
 **基础备份**
 
-- [ ] M1-16 (S) `Res/deploy/backup.sh` 加 `mclub-backup.service` 与 `.timer`: 每天凌晨 `pg_dump -Fc` 到 `/srv/maintclub/backups/db/`, 保留 7 份, 失败写入 journald 并留下标记文件
+- [x] M1-16 (S) `Res/deploy/backup.sh` 加 `mclub-backup.service` 与 `.timer`: 每天凌晨 `pg_dump -Fc` 到 `/srv/maintclub/backups/db/`, 保留 7 份, 失败写入 journald 并留下标记文件
 - [ ] M1-17 (S) 首次手动恢复到临时库 (`mclub_restore_test`) 并核对人员数量
 
 验收:
@@ -627,8 +627,7 @@ flowchart LR
 
 | 时间 | 版本 | 空闲 `available` 内存 | mclub RSS | PostgreSQL 总 RSS | 冷启动 | 页面 p95 | 备注 |
 |---|---|---|---|---|---|---|---|
-| | v0.0.0 (UPX 开) | | | | | | M0 基线 |
-| | v0.0.0 (UPX 关) | | | | | | M0 对比 |
+| 2026-11-16 | dev 897406b, 无 UPX | 1384 MB | 15 MB | 未单列 | 1 秒内 | 未测手机 | UPX 压缩件段错误, 已取消. 根卷 27 GB, 可用 23 GB |
 | | | | | | | | |
 
 ## 12. 调研来源
