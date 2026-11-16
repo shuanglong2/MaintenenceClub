@@ -1,0 +1,15 @@
+{{define "doc-search-body"}}
+<h1>搜索文档</h1>
+<form class="filters" method="get" action="/docs/search">
+<label>关键词<input name="q" value="{{.Doc.Query}}"></label>
+<button type="submit">搜索</button>
+</form>
+{{if and .Doc.Query (not .Doc.Hits)}}<p class="empty">没有找到.</p>{{end}}
+<ul>
+{{range .Doc.Hits}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a><p>{{.HTML}}</p></li>{{end}}
+</ul>
+<p class="tools">
+{{if gt .Offset 0}}<a href="/docs/search?q={{.Doc.Query}}&offset={{.Prev}}">上一页</a>{{end}}
+{{if .HasNext}}<a href="/docs/search?q={{.Doc.Query}}&offset={{add .Offset 20}}">下一页</a>{{end}}
+</p>
+{{end}}

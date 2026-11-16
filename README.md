@@ -4,6 +4,8 @@
 
 网站只在内网使用. 不在本机编译. 推送到 GitHub 后, Actions 检查格式, 测试, 并交叉编译 linux-x64 与 win-x64. 服务器运行 `Publish/linux-x64/mclub`, 前面是 Nginx, 数据库是 PostgreSQL 18.
 
+登录后可以写文档. 正文是 Markdown, 图片和附件从编辑页上传. 仅管理层的页面, 组员打不开, 搜索也找不到.
+
 只改 `Docs` 的提交不会触发编译. 编译固定 `GOAMD64=v1`, `CGO_ENABLED=0`, 以便在没有 AVX 的 J1800 上运行. Linux 构建不额外剥离调试信息, 两个平台都不使用 UPX.
 
 ## 目录

@@ -1,0 +1,27 @@
+{{define "doc-conflict-body"}}
+<h1>保存冲突</h1>
+<p>其他人已经改过这篇文档. 可以覆盖对方的版本, 放弃自己的修改, 或在下面合并后再提交.</p>
+<h2>差异</h2>
+<pre class="diff">{{.Doc.Conflict.Diff}}</pre>
+<h2>我的修改</h2>
+<pre>{{.Doc.Conflict.Mine}}</pre>
+<h2>对方的修改</h2>
+<pre>{{.Doc.Conflict.Theirs}}</pre>
+<h2>基础版本</h2>
+<pre>{{.Doc.Conflict.Base}}</pre>
+<form class="stack" method="post" action="/docs/p/{{.Doc.Page.ID}}/conflict">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="current_version" value="{{.Doc.Conflict.CurrentVersion}}">
+<input type="hidden" name="title" value="{{.Doc.Draft.Title}}">
+<input type="hidden" name="folder" value="{{.Doc.Draft.FolderID}}">
+<input type="hidden" name="visibility" value="{{.Doc.Draft.Visibility}}">
+<input type="hidden" name="tags" value="{{.Doc.Draft.Tags}}">
+<textarea name="mine" hidden>{{.Doc.Conflict.Mine}}</textarea>
+<label>合并结果<textarea name="merge" rows="12">{{.Doc.Conflict.Merge}}</textarea></label>
+<p class="tools">
+<button type="submit" name="choice" value="overwrite">覆盖</button>
+<button type="submit" name="choice" value="discard">放弃</button>
+<button type="submit" name="choice" value="merge">合并后重提交</button>
+</p>
+</form>
+{{end}}

@@ -1,0 +1,42 @@
+{{define "doc-form-body"}}
+<h1>{{.Title}}</h1>
+{{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
+{{if .Error}}<p class="error">{{.Error}}</p>{{end}}
+<form class="stack" method="post" action="{{if .Editing}}/docs/p/{{.Doc.Page.ID}}{{else}}/docs{{end}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="version" value="{{.Doc.Draft.Version}}">
+<label>标题<input name="title" value="{{.Doc.Draft.Title}}" required></label>
+<label>目录
+<select name="folder">
+<option value="0">不放入目录</option>
+{{range .Doc.Folders}}<option value="{{.ID}}" {{if eq .ID $.Doc.Draft.FolderID}}selected{{end}}>{{.Name}}</option>{{end}}
+</select>
+</label>
+{{if .Doc.Management}}
+<label>可见范围
+<select name="visibility">
+<option value="all" {{if ne .Doc.Draft.Visibility "management"}}selected{{end}}>全员</option>
+<option value="management" {{if eq .Doc.Draft.Visibility "management"}}selected{{end}}>仅管理层</option>
+</select>
+</label>
+{{else}}
+<input type="hidden" name="visibility" value="{{if .Doc.Draft.Visibility}}{{.Doc.Draft.Visibility}}{{else}}all{{end}}">
+{{end}}
+<label>标签<input name="tags" value="{{.Doc.Tags}}" placeholder="用逗号分隔"></label>
+<label>正文
+<textarea class="doc-body" id="doc-body" name="body" rows="16"
+ hx-post="/md/preview" hx-trigger="keyup changed delay:400ms" hx-target="#preview" hx-include="closest form">{{.Doc.Draft.Body}}</textarea>
+</label>
+<button type="submit">保存</button>
+</form>
+{{if .Editing}}
+<form class="stack" method="post" action="/docs/p/{{.Doc.Page.ID}}/attach" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>上传图片或附件<input type="file" name="file" required></label>
+<button type="submit">上传并插入</button>
+</form>
+{{end}}
+<h2>预览</h2>
+<div id="preview" class="prose"></div>
+<script src="{{static "docs.js"}}"></script>
+{{end}}

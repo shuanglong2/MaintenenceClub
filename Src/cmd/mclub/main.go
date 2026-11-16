@@ -11,11 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/audit"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/config"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/db"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/migrate"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/web"
 )
@@ -90,8 +92,14 @@ func cmdServe() error {
 	if err != nil {
 		return err
 	}
+	store := files.New(pool, cfg.Data, int64(cfg.UploadQuotaMB)<<20)
+	docSvc := docs.New(pool, store)
+	if err := docSvc.EnsureWelcome(ctx); err != nil {
+		slog.Warn("写入说明文档失败", "err", err)
+	}
+	go cleanUploads(ctx, store)
 	handler, err := web.New(pool, assets, web.Option{
-		People: svc, Secure: cfg.CookieSecure, TrustedProxy: cfg.TrustedProxy,
+		People: svc, Docs: docSvc, Secure: cfg.CookieSecure, TrustedProxy: cfg.TrustedProxy,
 	})
 	if err != nil {
 		return err
@@ -141,5 +149,25 @@ func modules() []migrate.Module {
 	return []migrate.Module{
 		{Name: "audit", FS: audit.SQL},
 		{Name: "people", FS: people.SQL},
+		{Name: "files", FS: files.SQL},
+		{Name: "docs", FS: docs.SQL},
+	}
+}
+
+func cleanUploads(ctx context.Context, store *files.Store) {
+	ticker := time.NewTicker(time.Hour)
+	defer ticker.Stop()
+	if _, err := store.CleanOrphans(ctx, time.Hour); err != nil {
+		slog.Warn("清理上传文件失败", "err", err)
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if _, err := store.CleanOrphans(ctx, time.Hour); err != nil {
+				slog.Warn("清理上传文件失败", "err", err)
+			}
+		}
 	}
 }

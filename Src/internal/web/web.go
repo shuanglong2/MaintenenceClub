@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
 )
@@ -93,7 +94,8 @@ type page struct {
 	Offset     int
 	Prev       int
 	HasNext    bool
-}
+	Doc        docView
+)
 
 type userView struct {
 	Name       string
@@ -104,6 +106,7 @@ type server struct {
 	assets *Assets
 	db     Pinger
 	people *people.Service
+	docs   *docs.Service
 	secure bool
 	proxy  string
 	tpl    *template.Template
@@ -112,6 +115,7 @@ type server struct {
 // Option 是网站运行时需要的设置.
 type Option struct {
 	People       *people.Service
+	Docs         *docs.Service
 	Secure       bool
 	TrustedProxy string
 }
@@ -128,7 +132,7 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
-	s := &server{assets: assets, db: db, people: opt.People, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl}
+	s := &server{assets: assets, db: db, people: opt.People, docs: opt.Docs, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl}
 	mux := http.NewServeMux()
 	s.routes(mux)
 	var handler http.Handler = mux
@@ -136,7 +140,7 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 	handler = s.checkCSRF(handler)
 	handler = s.loadSession(handler)
 	handler = http.NewCrossOriginProtection().Handler(handler)
-	handler = limitBody(2<<20, handler)
+	handler = limitBody(20<<20, handler)
 	handler = securityHeaders(handler)
 	handler = accessLog(handler)
 	handler = requestID(handler)
@@ -166,6 +170,27 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /account/password", s.accountPassword)
 	mux.HandleFunc("POST /account/contact", s.accountContact)
 	mux.HandleFunc("GET /audit", s.auditList)
+	mux.HandleFunc("GET /docs", s.docsIndex)
+	mux.HandleFunc("GET /docs/search", s.docsSearch)
+	mux.HandleFunc("GET /docs/export", s.docsExport)
+	mux.HandleFunc("GET /docs/new", s.docsNew)
+	mux.HandleFunc("POST /docs", s.docsCreate)
+	mux.HandleFunc("POST /docs/folders", s.docsFolderCreate)
+	mux.HandleFunc("POST /docs/folders/{id}", s.docsFolderUpdate)
+	mux.HandleFunc("POST /docs/upload", s.docsUpload)
+	mux.HandleFunc("POST /md/preview", s.mdPreview)
+	mux.HandleFunc("GET /docs/p/{id}/edit", s.docsEdit)
+	mux.HandleFunc("POST /docs/p/{id}", s.docsSave)
+	mux.HandleFunc("POST /docs/p/{id}/conflict", s.docsConflict)
+	mux.HandleFunc("GET /docs/p/{id}/history/{version}", s.docsVersion)
+	mux.HandleFunc("POST /docs/p/{id}/history/{version}", s.docsRestore)
+	mux.HandleFunc("GET /docs/p/{id}/history", s.docsHistory)
+	mux.HandleFunc("POST /docs/p/{id}/void", s.docsVoid)
+	mux.HandleFunc("POST /docs/p/{id}/unvoid", s.docsUnvoid)
+	mux.HandleFunc("POST /docs/p/{id}/attach", s.docsAttach)
+	mux.HandleFunc("GET /docs/p/{id}/{slug}", s.docsView)
+	mux.HandleFunc("GET /docs/p/{id}", s.docsView)
+	mux.HandleFunc("GET /files/{id}", s.fileDownload)
 	mux.HandleFunc("/", s.notFound)
 }
 

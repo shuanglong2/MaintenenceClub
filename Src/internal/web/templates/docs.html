@@ -1,0 +1,31 @@
+{{define "docs-body"}}
+<h1>文档</h1>
+<p class="tools"><a href="/docs/new">新建</a><a href="/docs/search">搜索</a><a href="/docs/export">导出</a></p>
+{{if and (not .Doc.Tree) (not .Doc.Loose)}}<p class="empty">还没有文档.</p>{{end}}
+<ul class="tree">
+{{range .Doc.Loose}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
+{{range .Doc.Tree}}{{template "doc-folder" .}}{{end}}
+</ul>
+<form class="stack" method="post" action="/docs/folders">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>新建目录</h2>
+<label>名称<input name="name" required></label>
+<button type="submit">创建目录</button>
+</form>
+{{if .Doc.Voided}}
+<h2>已作废</h2>
+<ul>
+{{range .Doc.Voided}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>
+<form method="post" action="/docs/p/{{.ID}}/unvoid"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit">恢复</button></form></li>{{end}}
+</ul>
+{{end}}
+{{end}}
+
+{{define "doc-folder"}}
+<li>{{.Name}}
+<ul>
+{{range .Pages}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
+{{range .Children}}{{template "doc-folder" .}}{{end}}
+</ul>
+</li>
+{{end}}

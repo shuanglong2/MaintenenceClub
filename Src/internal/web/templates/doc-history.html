@@ -1,0 +1,10 @@
+{{define "doc-history-body"}}
+<h1>{{.Doc.Page.Title}} 的历史</h1>
+<p><a href="/docs/p/{{.Doc.Page.ID}}">返回文档</a></p>
+{{if not .Doc.Versions}}<p class="empty">还没有历史版本.</p>{{end}}
+<ul>
+{{range .Doc.Versions}}
+<li><a href="/docs/p/{{$.Doc.Page.ID}}/history/{{.Version}}">版本 {{.Version}}</a> {{.Editor}} {{time8 .Saved}}</li>
+{{end}}
+</ul>
+{{end}}
