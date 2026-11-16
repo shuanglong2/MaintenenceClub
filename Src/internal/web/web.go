@@ -95,7 +95,7 @@ type page struct {
 	Prev       int
 	HasNext    bool
 	Doc        docView
-)
+}
 
 type userView struct {
 	Name       string
