@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- 新增 `Docs/Roadmap.md`: 在核实 Ubuntu 26.04, PostgreSQL 18, Go 标准库 CSRF, UPX, 中文检索等前提后, 把 Plan1 展开为 M0 到 M8 的任务清单, 并列出对 Plan1 的修订建议.
+
 ## 0.1.0 - 2026-11-16
 
 - 用 Go 重新初始化 MClub, 源码放在 `Src`, 计划放在 `Docs`.
