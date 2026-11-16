@@ -11,33 +11,33 @@ const (
 	StatusActive = "active"
 	StatusExited = "exited"
 
-	ActPeopleManage     = "people.manage"
-	ActPeopleList       = "people.list"
-	ActPeopleSensitive  = "people.sensitive"
-	ActPeopleSelf       = "people.self"
-	ActAuditRead        = "audit.read"
-	ActSystemManage     = "system.manage"
-	ActFinanceRead      = "finance.read"
-	ActFinanceWrite     = "finance.write"
-	ActTaskCreate       = "task.create"
-	ActTaskEditAll      = "task.edit_all"
-	ActTaskEditOwn      = "task.edit_own"
-	ActEventEdit        = "event.edit"
-	ActEventJoin        = "event.join"
-	ActLogEditAll       = "log.edit_all"
-	ActLogEditOwn       = "log.edit_own"
-	ActInventoryManage  = "inventory.manage"
-	ActInventoryUse     = "inventory.use"
-	ActDocsEdit         = "docs.edit"
-	ActDocsVisibility   = "docs.visibility"
+	ActPeopleManage    = "people.manage"
+	ActPeopleList      = "people.list"
+	ActPeopleSensitive = "people.sensitive"
+	ActPeopleSelf      = "people.self"
+	ActAuditRead       = "audit.read"
+	ActSystemManage    = "system.manage"
+	ActFinanceRead     = "finance.read"
+	ActFinanceWrite    = "finance.write"
+	ActTaskCreate      = "task.create"
+	ActTaskEditAll     = "task.edit_all"
+	ActTaskEditOwn     = "task.edit_own"
+	ActEventEdit       = "event.edit"
+	ActEventJoin       = "event.join"
+	ActLogEditAll      = "log.edit_all"
+	ActLogEditOwn      = "log.edit_own"
+	ActInventoryManage = "inventory.manage"
+	ActInventoryUse    = "inventory.use"
+	ActDocsEdit        = "docs.edit"
+	ActDocsVisibility  = "docs.visibility"
 )
 
 // User 是做权限判断时需要的身份.
 type User struct {
-	ID       int64
-	Role     string
-	Finance  bool
-	Active   bool
+	ID      int64
+	Role    string
+	Finance bool
+	Active  bool
 }
 
 // Resource 是被操作的对象. OwnerID 为 0 表示与具体的人无关.
