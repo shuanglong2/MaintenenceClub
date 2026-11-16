@@ -25,7 +25,8 @@ const (
 	touchEvery       = time.Minute
 )
 
-var loginPattern = regexp.MustCompile(`^[a-z][a-z0-9_]{1,31}$`)
+// 学号可以做登录名, 因此允许数字开头. 长度 2 到 32.
+var loginPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_]{1,31}$`)
 
 // Service 处理人员, 会话和登录.
 type Service struct {

@@ -17,7 +17,7 @@ CREATE TABLE people.people (
     CONSTRAINT people_role_check CHECK (role IN ('leader', 'deputy', 'member')),
     CONSTRAINT people_status_check CHECK (status IN ('active', 'exited')),
     CONSTRAINT people_name_check CHECK (char_length(name) BETWEEN 1 AND 40),
-    CONSTRAINT people_login_name_check CHECK (login_name ~ '^[a-z][a-z0-9_]{1,31}$')
+    CONSTRAINT people_login_name_check CHECK (login_name ~ '^[a-z0-9][a-z0-9_]{1,31}$')
 );
 
 CREATE TABLE people.sessions (

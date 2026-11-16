@@ -5,7 +5,7 @@
 <form class="stack" method="post" action="{{if .Editing}}/people/{{.Person.ID}}{{else}}/people{{end}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>姓名<input name="name" value="{{.Person.Name}}" required></label>
-{{if not .Editing}}<label>登录名<input name="login" value="{{.Person.Login}}" required></label>{{end}}
+{{if not .Editing}}<label>登录名<input name="login" value="{{.Person.Login}}" required><span class="hint">2 到 32 位, 小写字母或数字开头, 可含下划线.</span></label>{{end}}
 <label>职务
 <select name="role">
 <option value="leader" {{if eq .Person.Role "leader"}}selected{{end}}>组长</option>

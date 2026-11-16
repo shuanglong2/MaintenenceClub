@@ -40,6 +40,9 @@ func TestPeopleFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	actor := Actor{ID: session.User.ID, Name: session.Name, Role: session.User.Role, Active: true}
+	if _, err := svc.Create(ctx, actor, Input{Name: "学号用户", Login: "07240506", Role: "组员", Password: "member-pass"}); err != nil {
+		t.Fatal(err)
+	}
 	password, err := svc.Create(ctx, actor, Input{Name: "组员甲", Login: "member1", Role: "组员", Contact: "13800000000", Password: "member-pass"})
 	if err != nil || password != "member-pass" {
 		t.Fatalf("%s %v", password, err)
