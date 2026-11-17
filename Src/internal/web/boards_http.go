@@ -46,8 +46,8 @@ func (s *server) gatherList(w http.ResponseWriter, r *http.Request) {
 	}
 	view := gatherView{
 		Board: board, Base: boards.BasePath(board), Items: items, Kinds: boards.Kinds(board), Statuses: boards.Statuses(),
-		Kind: filter.Kind, Status: filter.Status, Query: filter.Query, ShowDone: filter.ShowDone, Leader: actor.leader(),
-		Creating: actor.leader() && r.URL.Query().Get("new") == "1",
+		Kind: filter.Kind, Status: filter.Status, Query: filter.Query, ShowDone: filter.ShowDone, Leader: actor.Leader(),
+		Creating: actor.Leader() && r.URL.Query().Get("new") == "1",
 	}
 	if raw := r.URL.Query().Get("id"); raw != "" {
 		if id, err := strconv.ParseInt(raw, 10, 64); err == nil && id > 0 {
@@ -79,7 +79,7 @@ func (s *server) gatherCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if !actor.leader() {
+	if !actor.Leader() {
 		s.showBoardErr(w, r, boards.ErrForbidden)
 		return
 	}

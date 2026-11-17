@@ -45,6 +45,11 @@ func (a Actor) leader() bool {
 	return a.Active && a.Role == people.RoleLeader
 }
 
+// Leader 表示当前人是在任组长.
+func (a Actor) Leader() bool {
+	return a.leader()
+}
+
 // Person 是参加的人.
 type Person struct {
 	ID   int64
