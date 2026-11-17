@@ -304,7 +304,7 @@
     host.innerHTML = "";
     editor = new Vditor(host, {
       cdn: "/static/vditor",
-      mode: next === "sv" ? "sv" : "ir",
+      mode: next === "sv" ? "sv" : "wysiwyg",
       lang: "zh_CN",
       theme: "classic",
       icon: "ant",
