@@ -1,0 +1,35 @@
+{{define "log-form-body"}}
+<h1>{{.Title}}</h1>
+<form class="stack" method="post" action="{{if .Editing}}/logs/{{.Log.Entry.ID}}{{else}}/logs{{end}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<input type="hidden" name="kind" value="{{.Log.Entry.Kind}}">
+<label>日期<input type="date" name="date" value="{{.Log.Entry.DateText}}" required></label>
+<label>用时 (分钟)<input name="minutes" inputmode="numeric" value="{{if .Log.Entry.Minutes}}{{.Log.Entry.Minutes}}{{end}}"></label>
+<label>内容<textarea name="body" rows="8">{{.Log.Entry.Body}}</textarea></label>
+{{if ne .Log.Entry.Kind "work"}}
+<label>对象<select name="target">
+<option value="item" {{if eq .Log.Entry.Target "item"}}selected{{end}}>器材</option>
+<option value="computer" {{if eq .Log.Entry.Target "computer"}}selected{{end}}>电脑</option>
+<option value="other" {{if eq .Log.Entry.Target "other"}}selected{{end}}>其他</option>
+</select></label>
+<label>关联器材编号<input name="item" inputmode="numeric" value="{{if .Log.Entry.ItemID}}{{.Log.Entry.ItemID}}{{end}}"></label>
+<label>现象<textarea name="symptom" rows="4" required>{{.Log.Entry.Symptom}}</textarea></label>
+<label>处理<textarea name="action" rows="4">{{.Log.Entry.Action}}</textarea></label>
+<label>结果<textarea name="result" rows="4">{{.Log.Entry.Result}}</textarea></label>
+{{if eq .Log.Entry.Kind "repair"}}
+<label>状态<select name="status">
+<option value="accepted" {{if eq .Log.Entry.Status "accepted"}}selected{{end}}>受理</option>
+<option value="doing" {{if eq .Log.Entry.Status "doing"}}selected{{end}}>处理中</option>
+<option value="ready" {{if eq .Log.Entry.Status "ready"}}selected{{end}}>待取</option>
+<option value="done" {{if eq .Log.Entry.Status "done"}}selected{{end}}>完成</option>
+</select></label>
+<label>来源<input name="source" value="{{.Log.Entry.Source}}" maxlength="80"></label>
+<label>联系方式<input name="contact" value="{{.Log.Entry.Contact}}" maxlength="80"></label>
+{{end}}
+<fieldset><legend>更换元件</legend>
+{{range .Log.Stock}}<label>{{.Code}} {{.Name}} (现存 {{.Qty}})<input type="number" name="qty_{{.ID}}" min="0" max="999" value="{{if .Chosen}}{{.Chosen}}{{end}}"></label>{{else}}<p>没有可领用的元件.</p>{{end}}
+</fieldset>
+{{end}}
+<button type="submit">保存</button>
+</form>
+{{end}}

@@ -1,0 +1,32 @@
+{{define "logs-body"}}
+<h1>日志</h1>
+<p class="tools"><a href="/logs/new?kind=work">工作日志</a> <a href="/logs/new?kind=repair">维修记录</a> <a href="/logs/new?kind=maintain">保养记录</a></p>
+<form class="stack" method="get" action="/logs">
+<label><input type="checkbox" name="mine" value="1" {{if .Log.Mine}}checked{{end}}>只看我的</label>
+<label>类型<select name="kind"><option value="">全部</option>
+<option value="work" {{if eq .Log.Kind "work"}}selected{{end}}>工作日志</option>
+<option value="repair" {{if eq .Log.Kind "repair"}}selected{{end}}>维修记录</option>
+<option value="maintain" {{if eq .Log.Kind "maintain"}}selected{{end}}>保养记录</option>
+</select></label>
+<label>报修状态<select name="status"><option value="">全部</option>
+<option value="accepted" {{if eq .Log.Status "accepted"}}selected{{end}}>受理</option>
+<option value="doing" {{if eq .Log.Status "doing"}}selected{{end}}>处理中</option>
+<option value="ready" {{if eq .Log.Status "ready"}}selected{{end}}>待取</option>
+<option value="done" {{if eq .Log.Status "done"}}selected{{end}}>完成</option>
+</select></label>
+<label>搜索<input name="q" value="{{.Log.Query}}"></label>
+<button type="submit">筛选</button>
+</form>
+{{if .Log.Entries}}
+{{range .Log.Entries}}
+<article>
+<p><a href="/logs/{{.ID}}">{{logKind .Kind}}</a> {{.DateText}} {{.AuthorName}}</p>
+<p>{{.Snippet}}{{if .Status}} · {{logStatus .Status}}{{end}}</p>
+</article>
+{{end}}
+<p>共 {{.Log.Total}} 条
+{{if gt .Log.Page 1}}<a href="{{.Log.PageHref (add .Log.Page -1)}}">上一页</a>{{end}}
+{{if .Log.HasNext}}<a href="{{.Log.PageHref (add .Log.Page 1)}}">下一页</a>{{end}}
+</p>
+{{else}}<p>没有记录.</p>{{end}}
+{{end}}

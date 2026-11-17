@@ -13,6 +13,7 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
@@ -549,6 +550,15 @@ func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
 		}, id)
 		if err != nil {
 			s.showEventErr(w, r, err)
+			return
+		}
+	}
+	if !allowed && s.logs != nil {
+		allowed, err = s.logs.CanSeeFile(r.Context(), logs.Actor{
+			ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP,
+		}, id)
+		if err != nil {
+			s.showLogErr(w, r, err)
 			return
 		}
 	}

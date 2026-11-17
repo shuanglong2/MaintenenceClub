@@ -20,6 +20,7 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
@@ -101,6 +102,7 @@ type page struct {
 	Inv        invView
 	Evt        eventView
 	Task       taskView
+	Log        logView
 }
 
 type userView struct {
@@ -116,6 +118,7 @@ type server struct {
 	inv       *inventory.Service
 	events    *events.Service
 	tasks     *tasks.Service
+	logs      *logs.Service
 	weekStart time.Weekday
 	secure    bool
 	proxy     string
@@ -129,6 +132,7 @@ type Option struct {
 	Inventory    *inventory.Service
 	Events       *events.Service
 	Tasks        *tasks.Service
+	Logs         *logs.Service
 	WeekStart    time.Weekday
 	Secure       bool
 	TrustedProxy string
@@ -147,13 +151,16 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 		"whenLabel":    events.WhenLabel,
 		"taskStatus":   tasks.StatusLabel,
 		"taskPriority": tasks.PriorityLabel,
+		"logKind":      logs.KindLabel,
+		"logStatus":    logs.StatusLabel,
+		"logTarget":    logs.TargetLabel,
 	})
 	tpl, err := tpl.ParseFS(assets.fsys, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
 	s := &server{
-		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks,
+		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks, logs: opt.Logs,
 		weekStart: opt.WeekStart, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl,
 	}
 	mux := http.NewServeMux()
@@ -259,6 +266,15 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /tasks/{id}/comments", s.tasksComment)
 	mux.HandleFunc("POST /tasks/{id}", s.tasksUpdate)
 	mux.HandleFunc("GET /tasks/{id}", s.tasksShow)
+	mux.HandleFunc("GET /logs", s.logsList)
+	mux.HandleFunc("GET /logs/new", s.logsNew)
+	mux.HandleFunc("POST /logs", s.logsCreate)
+	mux.HandleFunc("GET /logs/{id}/edit", s.logsEdit)
+	mux.HandleFunc("POST /logs/{id}/status", s.logsStatus)
+	mux.HandleFunc("POST /logs/{id}/files", s.logsUpload)
+	mux.HandleFunc("POST /logs/{id}/void", s.logsVoid)
+	mux.HandleFunc("POST /logs/{id}", s.logsUpdate)
+	mux.HandleFunc("GET /logs/{id}", s.logsShow)
 	mux.HandleFunc("/", s.notFound)
 }
 

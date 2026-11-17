@@ -22,6 +22,7 @@ type invView struct {
 	Stocktakes []inventory.Stocktake
 	Stocktake  inventory.Stocktake
 	Lines      []inventory.Line
+	Panels     []inventory.ItemPanel
 	Query      string
 	Category   string
 	Manage     bool
@@ -138,9 +139,14 @@ func (s *server) inventoryItem(w http.ResponseWriter, r *http.Request) {
 		s.showInvErr(w, r, err)
 		return
 	}
+	panels, err := inventory.ItemPanels(r.Context(), id)
+	if err != nil {
+		s.showInvErr(w, r, err)
+		return
+	}
 	s.render(w, r, http.StatusOK, page{
 		Title: item.Name, Body: "item-body",
-		Inv: invView{Item: item, Moves: moves, Events: events, Manage: inventory.Manage(actor)},
+		Inv: invView{Item: item, Moves: moves, Events: events, Panels: panels, Manage: inventory.Manage(actor)},
 	})
 }
 
@@ -503,8 +509,11 @@ func (s *server) uploads() *files.Store {
 	if s.inv != nil && s.inv.Files() != nil {
 		return s.inv.Files()
 	}
-	if s.events != nil {
+	if s.events != nil && s.events.Files() != nil {
 		return s.events.Files()
+	}
+	if s.logs != nil {
+		return s.logs.Files()
 	}
 	return nil
 }

@@ -1,0 +1,39 @@
+{{define "log-body"}}
+<h1>{{logKind .Log.Entry.Kind}}</h1>
+<p class="tools"><a href="/logs">列表</a> {{if .Log.CanEdit}}<a href="/logs/{{.Log.Entry.ID}}/edit">编辑</a>{{end}}</p>
+<p>{{.Log.Entry.DateText}} · {{.Log.Entry.AuthorName}}{{if .Log.Entry.Minutes}} · {{.Log.Entry.Minutes}} 分钟{{end}}</p>
+{{if .Log.Entry.Voided}}<p class="notice">已作废: {{.Log.Entry.VoidReason}}</p>{{end}}
+{{if ne .Log.Entry.Kind "work"}}
+<p>对象: {{logTarget .Log.Entry.Target}}{{if .Log.Entry.ItemID}} <a href="/inventory/items/{{.Log.Entry.ItemID}}">{{.Log.Entry.ItemName}}</a>{{end}}</p>
+<p>现象: {{.Log.Entry.Symptom}}</p>
+{{if .Log.Entry.Action}}<p>处理: {{.Log.Entry.Action}}</p>{{end}}
+{{if .Log.Entry.Result}}<p>结果: {{.Log.Entry.Result}}</p>{{end}}
+{{if .Log.Entry.Source}}<p>来源: {{.Log.Entry.Source}}</p>{{end}}
+{{if .Log.Entry.Contact}}<p>联系方式: {{.Log.Entry.Contact}}</p>{{end}}
+{{if eq .Log.Entry.Kind "repair"}}<p>状态: {{logStatus .Log.Entry.Status}}</p>{{end}}
+{{if .Log.Entry.Parts}}<ul>{{range .Log.Entry.Parts}}<li><a href="/inventory/items/{{.ItemID}}">{{.Code}} {{.Name}}</a> {{.Qty}}</li>{{end}}</ul>{{end}}
+{{end}}
+{{if .Log.Entry.Body}}<div class="doc">{{.Log.BodyHTML}}</div>{{end}}
+{{if and .Log.CanEdit (eq .Log.Entry.Kind "repair") (not .Log.Entry.Voided)}}
+<form method="post" action="/logs/{{.Log.Entry.ID}}/status">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+{{if ne .Log.Entry.Status "accepted"}}<button type="submit" name="status" value="accepted">受理</button>{{end}}
+{{if ne .Log.Entry.Status "doing"}}<button type="submit" name="status" value="doing">处理中</button>{{end}}
+{{if ne .Log.Entry.Status "ready"}}<button type="submit" name="status" value="ready">待取</button>{{end}}
+{{if ne .Log.Entry.Status "done"}}<button type="submit" name="status" value="done">完成</button>{{end}}
+</form>
+{{end}}
+{{if .Log.Entry.Files}}<h2>附图</h2><ul>{{range .Log.Entry.Files}}<li><a href="/files/{{.ID}}">{{.Name}}</a></li>{{end}}</ul>{{end}}
+{{if and .Log.CanEdit (not .Log.Entry.Voided)}}
+<form method="post" action="/logs/{{.Log.Entry.ID}}/files" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>附图<input type="file" name="file" required></label>
+<button type="submit">上传</button>
+</form>
+<form class="stack" method="post" action="/logs/{{.Log.Entry.ID}}/void">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>作废原因<input name="reason" required></label>
+<button type="submit">作废</button>
+</form>
+{{end}}
+{{end}}

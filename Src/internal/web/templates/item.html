@@ -90,6 +90,7 @@
 </form>
 {{end}}
 {{end}}
+{{range .Inv.Panels}}<h2>{{.Title}}</h2>{{.HTML}}{{end}}
 <h2>流水</h2>
 {{if not .Inv.Moves}}<p class="empty">还没有数量变动.</p>{{else}}
 <ul>

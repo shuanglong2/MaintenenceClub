@@ -14,6 +14,7 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/audit"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/buildinfo"
@@ -103,6 +104,14 @@ func cmdServe() error {
 	inv := inventory.New(pool, store)
 	eventSvc := events.New(pool, store)
 	taskSvc := tasks.New(pool)
+	logSvc := logs.New(pool, store, inv)
+	inventory.RegisterItemPanel(func(ctx context.Context, itemID int64) (inventory.ItemPanel, error) {
+		html, err := logSvc.ItemHistoryHTML(ctx, itemID)
+		if err != nil {
+			return inventory.ItemPanel{}, err
+		}
+		return inventory.ItemPanel{Title: "维修保养", HTML: html}, nil
+	})
 	web.RegisterTaskWidgets(taskSvc)
 	web.RegisterEventWidget(eventSvc)
 	web.RegisterInventoryWidget(inv)
@@ -114,6 +123,7 @@ func cmdServe() error {
 		Inventory:    inv,
 		Events:       eventSvc,
 		Tasks:        taskSvc,
+		Logs:         logSvc,
 		WeekStart:    cfg.WeekStart,
 		Secure:       cfg.CookieSecure,
 		TrustedProxy: cfg.TrustedProxy,
@@ -171,6 +181,7 @@ func modules() []migrate.Module {
 		{Name: "inventory", FS: inventory.SQL},
 		{Name: "events", FS: events.SQL},
 		{Name: "tasks", FS: tasks.SQL},
+		{Name: "logs", FS: logs.SQL},
 	}
 }
 
