@@ -221,7 +221,7 @@ func queryLatency() string {
 	for _, cost := range queryCost {
 		sum += cost
 	}
-	return fmt.Sprintf("%d 毫秒", (sum/time.Duration(len(queryCost))).Milliseconds())
+	return fmt.Sprintf("%d 毫秒", (sum / time.Duration(len(queryCost))).Milliseconds())
 }
 
 func cpuPercent(prev, next []uint64) (int, bool) {

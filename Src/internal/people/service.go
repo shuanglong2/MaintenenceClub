@@ -38,10 +38,10 @@ type Service struct {
 
 // Input 是创建或修改人员时提交的字段.
 type Input struct {
-	Name      string
-	Login     string
-	Role      string
-	Finance   bool
+	Name       string
+	Login      string
+	Role       string
+	Finance    bool
 	StudentID  string
 	ClassName  string
 	Contact    string
