@@ -2,12 +2,10 @@ package logs
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
