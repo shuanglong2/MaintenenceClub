@@ -163,7 +163,7 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 		"logStatus":    logs.StatusLabel,
 		"logTarget":    logs.TargetLabel,
 		"finKind":      finance.KindLabel,
-		"navOn":        func(path, prefix string) bool {
+		"navOn": func(path, prefix string) bool {
 			return path == prefix || strings.HasPrefix(path, prefix+"/")
 		},
 	})
