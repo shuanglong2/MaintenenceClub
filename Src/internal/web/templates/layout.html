@@ -21,10 +21,10 @@
 <a class="desk-only" href="/inventory" {{if navOn .Path "/inventory"}}aria-current="page"{{end}}>库存</a>
 <a class="desk-only" href="/logs" {{if navOn .Path "/logs"}}aria-current="page"{{end}}>记录</a>
 <a href="/people" {{if navOn .Path "/people"}}aria-current="page"{{end}}>人员</a>
+{{if .Finance}}<a class="desk-only" href="/finance" {{if navOn .Path "/finance"}}aria-current="page"{{end}}>财务</a>{{end}}
 {{if .ShowAudit}}<a class="desk-only" href="/audit" {{if navOn .Path "/audit"}}aria-current="page"{{end}}>审计</a>{{end}}
 {{if .ShowManage}}<a class="desk-only" href="/system" {{if navOn .Path "/system"}}aria-current="page"{{end}}>状态</a>{{end}}
 {{if .ShowManage}}<a class="desk-only" href="/settings" {{if navOn .Path "/settings"}}aria-current="page"{{end}}>设置</a>{{end}}
-{{if .Finance}}<a class="desk-only" href="/finance" {{if navOn .Path "/finance"}}aria-current="page"{{end}}>财务</a>{{end}}
 </nav>
 {{end}}
 <div class="account">

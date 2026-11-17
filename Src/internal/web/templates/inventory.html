@@ -71,18 +71,4 @@
 {{else}}<p class="empty">点一件物品查看存放和状态.</p>{{end}}
 </aside>
 </div>
-{{if .Inv.Manage}}
-<h2>新建位置</h2>
-<form class="stack" method="post" action="/inventory/locations">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>名称<input name="name" required></label>
-<label>上级
-<select name="parent">
-<option value="0">无</option>
-{{range .Inv.Locations}}<option value="{{.ID}}">{{.Path}}</option>{{end}}
-</select>
-</label>
-<button type="submit">创建位置</button>
-</form>
-{{end}}
 {{end}}

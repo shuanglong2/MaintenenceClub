@@ -173,6 +173,33 @@ func use(actor Actor) bool {
 	return people.Can(actor.user(), people.ActInventoryUse, people.Resource{})
 }
 
+// Place 按箱子名找到位置. 没有同名的就新建一个, 不再单独管理位置.
+func (s *Service) Place(ctx context.Context, actor Actor, name string) (int64, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return 0, nil
+	}
+	if !manage(actor) {
+		return 0, ErrForbidden
+	}
+	if utf8.RuneCountInString(name) > 40 {
+		return 0, ErrBadInput
+	}
+	var id int64
+	err := s.pool.QueryRow(ctx, `
+SELECT id FROM inventory.locations
+WHERE name = $1 AND parent_id IS NULL
+ORDER BY id
+LIMIT 1`, name).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return 0, err
+	}
+	return s.CreateLocation(ctx, actor, name, 0)
+}
+
 // CreateLocation 新建位置.
 func (s *Service) CreateLocation(ctx context.Context, actor Actor, name string, parent int64) (int64, error) {
 	if !manage(actor) {

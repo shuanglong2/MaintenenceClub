@@ -23,30 +23,43 @@
 {{end}}
 {{end}}
 <section class="widget">
+<header class="page-head">
 <h2>公告</h2>
+{{if .Home.CanPost}}
+<p class="desk-only"><button type="button" class="go" data-open="notice-box">创建</button></p>
+<dialog id="notice-box">
+<form class="stack" method="post" action="/notices">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>创建公告</h2>
+<label>内容<textarea name="body" rows="4" maxlength="400" required></textarea></label>
+<button type="submit">发布</button>
+<button type="button" data-close>取消</button>
+</form>
+</dialog>
+{{end}}
+</header>
 {{if .Home.Notices}}
-<ul>
+<div class="notice-list">
 {{range .Home.Notices}}
-<li>
-<p>{{.Body}}</p>
+<button type="button" class="card-link" data-open="notice-{{.ID}}">
+<strong>{{.Summary}}</strong>
+<small>{{.Author}} · {{time8 .At}}</small>
+</button>
+<dialog id="notice-{{.ID}}">
+<h2>公告</h2>
+<p class="notice-body">{{.Body}}</p>
 <p class="meta">{{.Author}} · {{time8 .At}}</p>
 {{if $.Home.CanPost}}
-<form method="post" action="/notices/{{.ID}}/void">
+<form class="desk-only" method="post" action="/notices/{{.ID}}/void">
 <input type="hidden" name="csrf" value="{{$.CSRF}}">
 <button type="submit">撤回</button>
 </form>
 {{end}}
-</li>
+<button type="button" data-close>关闭</button>
+</dialog>
 {{end}}
-</ul>
+</div>
 {{else}}<p class="empty">还没有公告.</p>{{end}}
-{{if .Home.CanPost}}
-<form class="stack" method="post" action="/notices">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>新公告<textarea name="body" rows="3" maxlength="400" required></textarea></label>
-<button type="submit">发布</button>
-</form>
-{{end}}
 </section>
 <section class="widget">
 <h2>进行中的活动</h2>

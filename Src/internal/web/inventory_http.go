@@ -75,18 +75,13 @@ func (s *server) inventoryList(w http.ResponseWriter, r *http.Request) {
 		shown = append(shown, item)
 	}
 	items = shown
-	locs, err := s.inv.Locations(r.Context())
-	if err != nil {
-		s.showInvErr(w, r, err)
-		return
-	}
 	voided, err := s.inv.Voided(r.Context(), actor)
 	if err != nil {
 		s.showInvErr(w, r, err)
 		return
 	}
 	view := invView{
-		Items: items, Locations: locs, Query: strings.TrimSpace(r.URL.Query().Get("q")),
+		Items: items, Query: strings.TrimSpace(r.URL.Query().Get("q")),
 		Category: strings.TrimSpace(r.URL.Query().Get("category")), Purpose: purpose, Condition: condition,
 		Manage: inventory.Manage(actor),
 	}
@@ -125,14 +120,9 @@ func (s *server) inventoryNew(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	locs, err := s.inv.Locations(r.Context())
-	if err != nil {
-		s.showInvErr(w, r, err)
-		return
-	}
 	s.render(w, r, http.StatusOK, page{
 		Title: "新建物品", Body: "item-form-body",
-		Inv: invView{Locations: locs, Manage: inventory.Manage(actor), Item: inventory.Item{Unit: "个"}},
+		Inv: invView{Manage: inventory.Manage(actor), Item: inventory.Item{Unit: "个"}},
 	})
 }
 
@@ -141,7 +131,12 @@ func (s *server) inventoryCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	item, err := s.inv.Create(r.Context(), actor, readItemDraft(r))
+	draft, err := s.itemDraft(r, actor)
+	if err != nil {
+		s.showInvErr(w, r, err)
+		return
+	}
+	item, err := s.inv.Create(r.Context(), actor, draft)
 	if err != nil {
 		s.showInvErr(w, r, err)
 		return
@@ -193,14 +188,9 @@ func (s *server) inventoryEdit(w http.ResponseWriter, r *http.Request) {
 		s.showInvErr(w, r, err)
 		return
 	}
-	locs, err := s.inv.Locations(r.Context())
-	if err != nil {
-		s.showInvErr(w, r, err)
-		return
-	}
 	s.render(w, r, http.StatusOK, page{
 		Title: "编辑 " + item.Name, Body: "item-form-body", Editing: true,
-		Inv: invView{Item: item, Locations: locs, Manage: inventory.Manage(actor)},
+		Inv: invView{Item: item, Manage: inventory.Manage(actor)},
 	})
 }
 
@@ -213,7 +203,12 @@ func (s *server) inventoryUpdate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if _, err := s.inv.Update(r.Context(), actor, id, readItemDraft(r)); err != nil {
+	draft, err := s.itemDraft(r, actor)
+	if err != nil {
+		s.showInvErr(w, r, err)
+		return
+	}
+	if _, err := s.inv.Update(r.Context(), actor, id, draft); err != nil {
 		s.showInvErr(w, r, err)
 		return
 	}
@@ -586,8 +581,17 @@ func (s *server) uploads() *files.Store {
 	return nil
 }
 
+func (s *server) itemDraft(r *http.Request, actor inventory.Actor) (inventory.Draft, error) {
+	draft := readItemDraft(r)
+	place, err := s.inv.Place(r.Context(), actor, r.FormValue("place"))
+	if err != nil {
+		return inventory.Draft{}, err
+	}
+	draft.LocationID = place
+	return draft, nil
+}
+
 func readItemDraft(r *http.Request) inventory.Draft {
-	location, _ := strconv.ParseInt(r.FormValue("location"), 10, 64)
 	minQty, _ := strconv.Atoi(r.FormValue("min_qty"))
 	qty, _ := strconv.Atoi(r.FormValue("qty"))
 	var received *time.Time
@@ -598,7 +602,7 @@ func readItemDraft(r *http.Request) inventory.Draft {
 	}
 	return inventory.Draft{
 		Code: r.FormValue("code"), Name: r.FormValue("name"), Category: r.FormValue("category"),
-		Spec: r.FormValue("spec"), Unit: r.FormValue("unit"), LocationID: location,
+		Spec: r.FormValue("spec"), Unit: r.FormValue("unit"),
 		MinQty: minQty, Tracked: r.FormValue("tracked") == "1", Note: r.FormValue("note"), Qty: qty,
 		Purpose: r.FormValue("purpose"), Model: r.FormValue("model"), Value: r.FormValue("value"),
 		Condition: r.FormValue("condition"), Received: received,

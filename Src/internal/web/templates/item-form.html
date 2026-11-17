@@ -34,12 +34,7 @@
 </label>
 <label>入库日期<input type="date" name="received" value="{{if not .Inv.Item.Received.IsZero}}{{.Inv.Item.Received.Format "2006-01-02"}}{{end}}"></label>
 <label>单位<input name="unit" value="{{.Inv.Item.Unit}}"></label>
-<label>位置
-<select name="location">
-<option value="0">未指定</option>
-{{range .Inv.Locations}}<option value="{{.ID}}" {{if eq .ID $.Inv.Item.LocationID}}selected{{end}}>{{.Path}}</option>{{end}}
-</select>
-</label>
+<label>位置<input name="place" value="{{.Inv.Item.Location}}" maxlength="40" placeholder="例如 A箱"></label>
 {{if .Editing}}
 <input type="hidden" name="tracked" value="{{if .Inv.Item.Tracked}}1{{end}}">
 <p class="hint">逐件管理: {{if .Inv.Item.Tracked}}是{{else}}否{{end}}</p>

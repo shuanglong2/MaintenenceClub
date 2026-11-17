@@ -222,6 +222,7 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /people/{id}/exit", s.peopleExit)
 	mux.HandleFunc("POST /people/{id}/restore", s.peopleRestore)
 	mux.HandleFunc("POST /people/{id}/reset-password", s.peopleReset)
+	mux.HandleFunc("POST /people/{id}/department", s.peopleDepartment)
 	mux.HandleFunc("POST /people/{id}/demote", s.peopleDemote)
 	mux.HandleFunc("POST /people/{id}/kick", s.peopleKick)
 	mux.HandleFunc("GET /settings", s.settingsPage)

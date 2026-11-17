@@ -956,6 +956,24 @@ main:has(.work) {
   color: #6d655c;
 }
 
+button.card-link {
+  display: grid;
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: 400;
+  background: #fffdf9;
+}
+
+.notice-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.notice-body {
+  white-space: pre-wrap;
+}
+
 .cal-day a[data-kind="任务"] { background: #d9ebe3; }
 .cal-day a[data-kind="活动"] { background: #f6e4d4; }
 .cal-day a[data-kind="竞赛"] { background: #efe3f6; }

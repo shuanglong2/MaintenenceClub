@@ -100,6 +100,16 @@
 <form method="post" action="/people/{{.Person.ID}}/kick"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">踢出</button></form>
 {{end}}
 <form method="post" action="/people/{{.Person.ID}}/reset-password"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">重置密码</button></form>
+<form class="stack" method="post" action="/people/{{.Person.ID}}/department">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>部门
+<select name="department">
+<option value="">未分组</option>
+{{range $.Depts}}<option value="{{.}}" {{if eq . $.Person.Department}}selected{{end}}>{{.}}</option>{{end}}
+</select>
+</label>
+<button type="submit">确认部门</button>
+</form>
 </div>
 {{end}}
 {{else}}

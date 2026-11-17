@@ -18,7 +18,7 @@ type Notice struct {
 	At     time.Time
 }
 
-// Notices 返回尚未撤回的公告, 新的在前, 最多 8 条.
+// Notices 返回尚未撤回的公告, 新的在前.
 func (s *Service) Notices(ctx context.Context, actor Actor) ([]Notice, error) {
 	if !peopleCanRead(actor) {
 		return nil, ErrForbidden
@@ -28,7 +28,7 @@ SELECT id, body, author_name, created_at
 FROM docs.notices
 WHERE voided_at IS NULL
 ORDER BY created_at DESC, id DESC
-LIMIT 8`)
+LIMIT 30`)
 	if err != nil {
 		return nil, err
 	}

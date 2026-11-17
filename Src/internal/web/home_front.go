@@ -17,10 +17,11 @@ import (
 )
 
 type noticeView struct {
-	ID     int64
-	Body   string
-	Author string
-	At     time.Time
+	ID      int64
+	Body    string
+	Summary string
+	Author  string
+	At      time.Time
 }
 
 type homeView struct {
@@ -67,7 +68,8 @@ func (s *server) front(w http.ResponseWriter, r *http.Request) {
 		} else {
 			for _, notice := range notices {
 				home.Notices = append(home.Notices, noticeView{
-					ID: notice.ID, Body: notice.Body, Author: notice.Author, At: notice.At,
+					ID: notice.ID, Body: notice.Body, Summary: noticeSummary(notice.Body),
+					Author: notice.Author, At: notice.At,
 				})
 			}
 		}
@@ -102,6 +104,16 @@ func (s *server) front(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	s.render(w, r, http.StatusOK, page{Title: "主页", Body: "home-body", Find: find, Home: home})
+}
+
+func noticeSummary(body string) string {
+	body = strings.Join(strings.Fields(body), " ")
+	const limit = 42
+	runes := []rune(body)
+	if len(runes) <= limit {
+		return body
+	}
+	return string(runes[:limit]) + "…"
 }
 
 func (s *server) noticeCreate(w http.ResponseWriter, r *http.Request) {

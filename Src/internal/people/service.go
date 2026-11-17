@@ -836,16 +836,8 @@ func validateText(in Input) error {
 	if utf8.RuneCountInString(in.QQ) > 20 || utf8.RuneCountInString(in.Phone) > 20 || utf8.RuneCountInString(in.Bio) > 500 || utf8.RuneCountInString(in.Website) > 200 {
 		return ErrBadInput
 	}
-	if in.Department != "" {
-		ok := false
-		for _, name := range Departments() {
-			if in.Department == name {
-				ok = true
-			}
-		}
-		if !ok {
-			return ErrBadInput
-		}
+	if in.Department != "" && !knownDepartment(in.Department) {
+		return ErrBadInput
 	}
 	if in.Birthday != "" {
 		if _, err := time.Parse("2006-01-02", in.Birthday); err != nil {
@@ -870,6 +862,45 @@ func (s *Service) noteLogin(ctx context.Context, id int64, name, ip, action, sum
 		return
 	}
 	_ = tx.Commit(ctx)
+}
+
+// SetDepartment 只改所属部门.
+func (s *Service) SetDepartment(ctx context.Context, actor Actor, id int64, department string) error {
+	if !Can(actor.user(), ActPeopleManage, Resource{}) {
+		return ErrForbidden
+	}
+	department = strings.TrimSpace(department)
+	if department != "" && !knownDepartment(department) {
+		return ErrBadInput
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	current, err := s.loadLocked(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if !Can(actor.user(), ActPeopleManage, Resource{Role: current.Role}) {
+		return ErrForbidden
+	}
+	if _, err := tx.Exec(ctx, `UPDATE people.people SET department = $2 WHERE id = $1`, id, department); err != nil {
+		return err
+	}
+	if err := s.auditPerson(ctx, tx, actor, "people.department", id, "调整部门 "+current.Name, current); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
+}
+
+func knownDepartment(name string) bool {
+	for _, item := range Departments() {
+		if item == name {
+			return true
+		}
+	}
+	return false
 }
 
 // Demote 把组长或副组长换成组员, 资料保留.

@@ -223,6 +223,22 @@ func (s *server) peopleReset(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *server) peopleDepartment(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := pathID(w, r)
+	if !ok {
+		return
+	}
+	if err := s.people.SetDepartment(r.Context(), s.actor(user), id, r.FormValue("department")); err != nil {
+		s.showErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/people?id="+strconv.FormatInt(id, 10), http.StatusSeeOther)
+}
+
 func (s *server) peopleDemote(w http.ResponseWriter, r *http.Request) {
 	s.peopleShift(w, r, true)
 }
