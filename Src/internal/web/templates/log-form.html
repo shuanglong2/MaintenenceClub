@@ -12,7 +12,12 @@
 <option value="computer" {{if eq .Log.Entry.Target "computer"}}selected{{end}}>电脑</option>
 <option value="other" {{if eq .Log.Entry.Target "other"}}selected{{end}}>其他</option>
 </select></label>
-<label>关联器材编号<input name="item" inputmode="numeric" value="{{if .Log.Entry.ItemID}}{{.Log.Entry.ItemID}}{{end}}"></label>
+<label>关联器材
+<select name="item">
+<option value="0">不关联</option>
+{{range .Log.Gear}}<option value="{{.ID}}" {{if eq .ID $.Log.Entry.ItemID}}selected{{end}}>{{.Code}} {{.Name}}</option>{{end}}
+</select>
+</label>
 <label>现象<textarea name="symptom" rows="4" required>{{.Log.Entry.Symptom}}</textarea></label>
 <label>处理<textarea name="action" rows="4">{{.Log.Entry.Action}}</textarea></label>
 <label>结果<textarea name="result" rows="4">{{.Log.Entry.Result}}</textarea></label>

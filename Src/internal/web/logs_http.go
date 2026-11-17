@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
@@ -18,6 +19,7 @@ type logView struct {
 	Entry    logs.Entry
 	Entries  []logs.Entry
 	Stock    []logStock
+	Gear     []logStock
 	BodyHTML template.HTML
 	CanEdit  bool
 	Kind     string
@@ -251,7 +253,30 @@ func (s *server) logForm(r *http.Request, actor logs.Actor, entry logs.Entry) (l
 	for _, item := range stock {
 		rows = append(rows, logStock{Stock: item, Chosen: chosen[item.ID]})
 	}
-	return logView{Entry: entry, Stock: rows}, nil
+	return logView{Entry: entry, Stock: rows, Gear: s.logGear(r, actor, entry)}, nil
+}
+
+func (s *server) logGear(r *http.Request, actor logs.Actor, entry logs.Entry) []logStock {
+	var out []logStock
+	seen := map[int64]bool{}
+	if s.inv != nil {
+		items, err := s.inv.List(r.Context(), inventory.Actor{
+			ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP,
+		}, "", "")
+		if err == nil {
+			for _, item := range items {
+				if !item.Tracked && item.ID != entry.ItemID {
+					continue
+				}
+				out = append(out, logStock{Stock: logs.Stock{ID: item.ID, Code: item.Code, Name: item.Name, Qty: item.Qty}})
+				seen[item.ID] = true
+			}
+		}
+	}
+	if entry.ItemID > 0 && !seen[entry.ItemID] {
+		out = append(out, logStock{Stock: logs.Stock{ID: entry.ItemID, Code: "", Name: entry.ItemName}})
+	}
+	return out
 }
 
 func (s *server) logUser(w http.ResponseWriter, r *http.Request) (logs.Actor, bool) {

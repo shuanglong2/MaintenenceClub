@@ -17,10 +17,15 @@
 <form method="post" action="/tasks/{{.ID}}/status" hx-post="/tasks/{{.ID}}/status" hx-target="#board" hx-swap="outerHTML">
 <input type="hidden" name="csrf" value="{{$.CSRF}}">
 <input type="hidden" name="back" value="board">
-{{if ne .Status "todo"}}<button type="submit" name="status" value="todo">待办</button>{{end}}
-{{if ne .Status "doing"}}<button type="submit" name="status" value="doing">进行中</button>{{end}}
-{{if ne .Status "done"}}<button type="submit" name="status" value="done">完成</button>{{end}}
-{{if ne .Status "cancelled"}}<button type="submit" name="status" value="cancelled">取消</button>{{end}}
+<label>移到
+<select name="status">
+<option value="todo" {{if eq .Status "todo"}}selected{{end}}>待办</option>
+<option value="doing" {{if eq .Status "doing"}}selected{{end}}>进行中</option>
+<option value="done" {{if eq .Status "done"}}selected{{end}}>完成</option>
+<option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>取消</option>
+</select>
+</label>
+<button type="submit">移动</button>
 </form>
 {{end}}
 </article>

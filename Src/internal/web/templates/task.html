@@ -11,10 +11,15 @@
 {{if .Task.CanEdit}}
 <form method="post" action="/tasks/{{.Task.Task.ID}}/status">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
-{{if ne .Task.Task.Status "todo"}}<button type="submit" name="status" value="todo">待办</button>{{end}}
-{{if ne .Task.Task.Status "doing"}}<button type="submit" name="status" value="doing">进行中</button>{{end}}
-{{if ne .Task.Task.Status "done"}}<button type="submit" name="status" value="done">完成</button>{{end}}
-{{if ne .Task.Task.Status "cancelled"}}<button type="submit" name="status" value="cancelled">取消</button>{{end}}
+<label>状态
+<select name="status">
+<option value="todo" {{if eq .Task.Task.Status "todo"}}selected{{end}}>待办</option>
+<option value="doing" {{if eq .Task.Task.Status "doing"}}selected{{end}}>进行中</option>
+<option value="done" {{if eq .Task.Task.Status "done"}}selected{{end}}>完成</option>
+<option value="cancelled" {{if eq .Task.Task.Status "cancelled"}}selected{{end}}>取消</option>
+</select>
+</label>
+<button type="submit">保存状态</button>
 </form>
 {{end}}
 <h2>评论</h2>

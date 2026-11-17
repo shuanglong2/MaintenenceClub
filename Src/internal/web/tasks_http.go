@@ -58,6 +58,7 @@ type taskView struct {
 	Kinds      []string
 	Statuses   []string
 	Priorities []string
+	Events     []taskChoice
 	Notes      []taskNote
 	BodyHTML   template.HTML
 	CanEdit    bool
@@ -218,7 +219,8 @@ func (s *server) tasksNew(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, http.StatusOK, page{
 		Title: "新建任务", Body: "task-form-body",
 		Task: taskView{
-			Task: item, People: people, Items: items, Kinds: tasks.Kinds(), Statuses: tasks.Statuses(), Priorities: tasks.Priorities(),
+			Task: item, People: people, Items: items, Events: s.taskEvents(r, actor, item),
+			Kinds: tasks.Kinds(), Statuses: tasks.Statuses(), Priorities: tasks.Priorities(),
 		},
 	})
 }
@@ -291,7 +293,8 @@ func (s *server) tasksEdit(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, http.StatusOK, page{
 		Title: "编辑任务", Body: "task-form-body", Editing: true,
 		Task: taskView{
-			Task: item, People: people, Items: items, Kinds: tasks.Kinds(), Statuses: tasks.Statuses(), Priorities: tasks.Priorities(), CanEdit: true,
+			Task: item, People: people, Items: items, Events: s.taskEvents(r, actor, item),
+			Kinds: tasks.Kinds(), Statuses: tasks.Statuses(), Priorities: tasks.Priorities(), CanEdit: true,
 		},
 	})
 }
@@ -388,6 +391,34 @@ func (s *server) taskChoices(r *http.Request, actor tasks.Actor, people []tasks.
 		itemChoices = append(itemChoices, taskChoice{ID: item.ID, Label: item.Code + " " + item.Name, On: chosenItems[item.ID]})
 	}
 	return personChoices, itemChoices, nil
+}
+
+func (s *server) taskEvents(r *http.Request, actor tasks.Actor, current tasks.Task) []taskChoice {
+	var out []taskChoice
+	seen := map[int64]bool{}
+	if s.events != nil {
+		found, err := s.events.List(r.Context(), events.Actor{
+			ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP,
+		}, false)
+		if err == nil {
+			for _, event := range found {
+				label := event.Title
+				if label == "" {
+					label = strconv.FormatInt(event.ID, 10)
+				}
+				out = append(out, taskChoice{ID: event.ID, Label: label})
+				seen[event.ID] = true
+			}
+		}
+	}
+	if current.EventID > 0 && !seen[current.EventID] {
+		label := current.EventTitle
+		if label == "" {
+			label = "活动 " + strconv.FormatInt(current.EventID, 10)
+		}
+		out = append(out, taskChoice{ID: current.EventID, Label: label})
+	}
+	return out
 }
 
 func (s *server) taskUser(w http.ResponseWriter, r *http.Request) (tasks.Actor, bool) {

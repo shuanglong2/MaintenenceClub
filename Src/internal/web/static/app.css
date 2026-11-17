@@ -438,6 +438,32 @@ textarea.doc-body {
   min-height: 16rem;
 }
 
+.editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.editor .prose {
+  min-height: 16rem;
+  background: #fffdf9;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.7rem;
+}
+
+fieldset {
+  border: 1px solid #e4d9cc;
+  border-radius: 0.7rem;
+  margin: 0;
+  padding: 0.6rem 0.8rem 0.8rem;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 0.3rem;
+}
+
 pre.diff,
 .prose pre {
   overflow-x: auto;
@@ -593,9 +619,8 @@ details.danger summary {
 }
 
 .board form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
+  display: grid;
+  gap: 0.45rem;
   margin-top: 0.45rem;
 }
 
@@ -628,7 +653,8 @@ details.danger summary {
     display: block;
   }
 
-  .board {
+  .board,
+  .editor {
     grid-template-columns: 1fr;
   }
 }
