@@ -1,0 +1,15 @@
+{{define "system-body"}}
+<h1>系统状态</h1>
+{{if .Sys.Warn}}<p class="error">{{.Sys.Warn}}</p>{{end}}
+<dl>
+<div><dt>版本</dt><dd>{{.Sys.Version}}</dd></div>
+<div><dt>提交</dt><dd>{{.Sys.Commit}}</dd></div>
+<div><dt>构建</dt><dd>{{.Sys.Built}}</dd></div>
+<div><dt>磁盘剩余</dt><dd>{{.Sys.DiskFree}} / {{.Sys.DiskTotal}}</dd></div>
+<div><dt>上传占用</dt><dd>{{.Sys.UploadUsed}} / {{.Sys.UploadMax}}</dd></div>
+<div><dt>数据库</dt><dd>{{.Sys.DBSize}}</dd></div>
+<div><dt>最近备份</dt><dd>{{.Sys.BackupAt}} {{.Sys.BackupText}}</dd></div>
+<div><dt>进程内存</dt><dd>{{.Sys.Memory}}</dd></div>
+</dl>
+<p class="hint">磁盘剩余低于 15%, 或上传占用达到配额的 80%, 会显示在上面.</p>
+{{end}}

@@ -34,6 +34,29 @@ mclub admin reset-password <登录名>
 
 ## 部署
 
-服务器上的安装, 发布和回滚脚本在 `Res/deploy`. 先在 J1800 上执行 `install.sh`, 再用 `deploy.sh <版本标签>` 或 `deploy.sh <本地二进制>` 发布. 发布前会备份数据库, 健康检查失败会切回上一版. 每天 03:00 (Asia/Shanghai) 由 `mclub-backup.timer` 再备份一次, 保留 7 份.
+服务器上的安装, 发布和回滚脚本在 `Res/deploy`. 先在 J1800 上执行 `install.sh`, 再用 `deploy.sh <版本标签>` 或 `deploy.sh <本地二进制>` 发布. 发布前会备份数据库, 健康检查失败会切回上一版. 每天 03:00 (Asia/Shanghai) 由 `mclub-backup.timer` 备份数据库和上传目录, 各保留 7 份. 组长登录后打开 `/system` 查看磁盘, 备份结果和版本.
+
+## 备份与恢复
+
+数据库转储在 `/srv/maintclub/backups/db`, 上传目录的硬链接快照在 `/srv/maintclub/backups/uploads`. 备份总占用超过 8 GB 时删掉较旧的快照, 至少留 1 份. 结果写在 `/srv/maintclub/backups/LAST_STATUS`.
+
+异机副本在另一台电脑上执行:
+
+```text
+Res/deploy/pull-backup.sh 用户@服务器 本地目录
+```
+
+拉取账号要能读取备份目录, 把该系统用户加入 `mclub` 组即可. 不要把备份放进 git 仓库.
+
+恢复演练使用临时库, 不要覆盖正在使用的 `mclub`:
+
+1. 记下开始时间.
+2. `runuser -u postgres -- createdb --owner=mclub 临时库名`
+3. `runuser -u mclub -- pg_restore --no-owner --no-acl -d 临时库名 /srv/maintclub/backups/db/最新.dump`
+4. 对比 `people.people`, `docs.pages`, `inventory.items` 的行数, 并抽几条文档标题.
+5. `rsync -a /srv/maintclub/backups/uploads/最新/ /tmp/mclub-restore-uploads/` 后对比文件数.
+6. 记下结束时间. 临时库可以留着. 不要删除 `mclub` 和已有的 `mclub_restore_test`.
+
+2026-11-17 在同一台服务器上按上面的步骤还原到临时库 `mclub_restore_m7`, 从建库到对比完成用了 2 秒. 人员, 文档, 物品, 活动和财务的行数都是 1, 4, 2, 1, 1, 四篇文档标题一致. 当时上传目录没有文件, 快照里的文件数也是 0. 没有第二台机器, 所以上传文件没有在另一台机器上展开. 旧的 `mclub_restore_test` 没有删除.
 
 打 `v*` 标签后, Actions 把 `mclub-linux-x64`, `mclub-win-x64.exe` 和 `SHA256SUMS` 发到 GitHub Release.

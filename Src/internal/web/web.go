@@ -106,6 +106,7 @@ type page struct {
 	Task       taskView
 	Log        logView
 	Fin        finView
+	Sys        systemView
 }
 
 type userView struct {
@@ -290,6 +291,7 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /finance/{id}/void", s.financeVoid)
 	mux.HandleFunc("POST /finance/{id}/files", s.financeUpload)
 	mux.HandleFunc("GET /finance/{id}", s.financeShow)
+	mux.HandleFunc("GET /system", s.systemStatus)
 	mux.HandleFunc("/", s.notFound)
 }
 

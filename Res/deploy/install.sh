@@ -9,7 +9,7 @@ fi
 src="$(cd "$(dirname "$0")" && pwd)"
 
 apt-get update
-apt-get install -y postgresql-18 nginx curl
+apt-get install -y postgresql-18 nginx curl rsync
 
 if ! id mclub >/dev/null 2>&1; then
   useradd --system --home-dir /srv/maintclub --shell /usr/sbin/nologin mclub
@@ -20,7 +20,8 @@ install -d -o mclub -g mclub -m 0750 \
   /srv/maintclub/releases \
   /srv/maintclub/uploads \
   /srv/maintclub/backups \
-  /srv/maintclub/backups/db
+  /srv/maintclub/backups/db \
+  /srv/maintclub/backups/uploads
 
 install -d -m 0755 /etc/mclub
 if [ ! -f /etc/mclub/mclub.env ]; then

@@ -46,6 +46,12 @@ func New(pool *pgxpool.Pool, root string, quota int64) *Store {
 	return &Store{pool: pool, root: root, quota: quota}
 }
 
+// Root 是上传文件所在的目录.
+func (s *Store) Root() string { return s.root }
+
+// Quota 是上传容量上限, 单位是字节. 0 表示不限制.
+func (s *Store) Quota() int64 { return s.quota }
+
 // Save 校验类型和大小, 图片会先缩小, 然后写入磁盘和数据库.
 func (s *Store) Save(ctx context.Context, uploader int64, module, original string, r io.Reader) (Meta, error) {
 	if !moduleName.MatchString(module) {

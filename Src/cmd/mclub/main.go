@@ -102,6 +102,9 @@ func cmdServe() error {
 	if err := docSvc.EnsureWelcome(ctx); err != nil {
 		slog.Warn("写入说明文档失败", "err", err)
 	}
+	if err := docSvc.EnsureManual(ctx); err != nil {
+		slog.Warn("写入使用说明失败", "err", err)
+	}
 	inv := inventory.New(pool, store)
 	eventSvc := events.New(pool, store)
 	taskSvc := tasks.New(pool)

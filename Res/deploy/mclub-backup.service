@@ -1,5 +1,5 @@
 [Unit]
-Description=维修组数据库备份
+Description=维修组数据库和上传目录备份
 After=postgresql.service
 
 [Service]
