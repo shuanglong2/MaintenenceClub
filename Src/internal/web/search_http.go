@@ -17,7 +17,7 @@ import (
 )
 
 type findView struct {
-	Query string
+	Query  string
 	Groups []findGroup
 }
 
