@@ -159,6 +159,10 @@ func (s *server) saveDoc(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 	draft := readDraft(r, id)
+	if err := s.allowDocs(r.Context(), int64(len(draft.Body))); err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
 	out, err := s.docs.Save(r.Context(), actor, draft)
 	if err != nil {
 		s.showDocErr(w, r, err)
@@ -573,6 +577,10 @@ func (s *server) receiveFile(w http.ResponseWriter, r *http.Request, backToEdit 
 		return
 	}
 	defer file.Close()
+	if err := s.allowDocs(r.Context(), header.Size); err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
 	meta, err := store.Save(r.Context(), actor.ID, "docs", header.Filename, file)
 	if err != nil {
 		s.showDocErr(w, r, err)

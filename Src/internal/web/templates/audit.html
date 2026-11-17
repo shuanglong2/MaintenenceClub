@@ -1,24 +1,40 @@
 {{define "audit-body"}}
 <h1>审计</h1>
-<form class="filters" method="get" action="/audit">
-<label>人员编号<input name="actor" value="{{.Filter.Actor}}"></label>
-<label>动作<input name="action" value="{{.Filter.Action}}"></label>
+<p class="lead">登录和各项操作都留在这里, 不能删除.</p>
+<div class="work">
+<aside class="work-side">
+<form class="stack" method="get" action="/audit">
+<label>分类
+<select name="kind">
+<option value="">全部</option>
+<option value="login" {{if eq .Filter.Kind "login"}}selected{{end}}>登录</option>
+<option value="docs" {{if eq .Filter.Kind "docs"}}selected{{end}}>文档</option>
+<option value="events" {{if eq .Filter.Kind "events"}}selected{{end}}>日程</option>
+<option value="tasks" {{if eq .Filter.Kind "tasks"}}selected{{end}}>任务</option>
+<option value="activity" {{if eq .Filter.Kind "activity"}}selected{{end}}>活动</option>
+<option value="competition" {{if eq .Filter.Kind "competition"}}selected{{end}}>竞赛</option>
+<option value="inventory" {{if eq .Filter.Kind "inventory"}}selected{{end}}>库存</option>
+<option value="logs" {{if eq .Filter.Kind "logs"}}selected{{end}}>记录</option>
+<option value="people" {{if eq .Filter.Kind "people"}}selected{{end}}>人员</option>
+</select>
+</label>
 <label>从<input type="date" name="from" value="{{.Filter.From}}"></label>
 <label>到<input type="date" name="to" value="{{.Filter.To}}"></label>
 <button type="submit">筛选</button>
 </form>
-{{if not .Audit}}<p class="empty">没有记录.</p>{{else}}
-<div class="table-scroll"><table>
-<thead><tr><th>时间</th><th>人员</th><th>动作</th><th>摘要</th></tr></thead>
-<tbody>
+</aside>
+<section class="work-list">
+{{if not .Audit}}<p class="empty">没有记录.</p>{{end}}
 {{range .Audit}}
-<tr><td>{{.At}}</td><td>{{.Actor}}</td><td>{{.Action}}</td><td>{{.Summary}}</td></tr>
+<article class="card-link">
+<strong>{{.Summary}}</strong>
+<span>{{.At}} · {{.Action}}</span>
+<small>{{.Actor}} · 编号 {{.ActorID}} · {{if .IP}}{{.IP}}{{else}}无 IP{{end}}</small>
+</article>
 {{end}}
-</tbody>
-</table></div>
-<p class="tools">
-{{if .Offset}}<a href="/audit?offset={{.Prev}}&amp;actor={{.Filter.Actor}}&amp;action={{.Filter.Action}}&amp;from={{.Filter.From}}&amp;to={{.Filter.To}}">上一页</a>{{end}}
-{{if .HasNext}}<a href="/audit?offset={{add .Offset 50}}&amp;actor={{.Filter.Actor}}&amp;action={{.Filter.Action}}&amp;from={{.Filter.From}}&amp;to={{.Filter.To}}">下一页</a>{{end}}
-</p>
-{{end}}
+</section>
+<aside class="work-detail">
+<p class="empty">这些记录只追加, 不能改, 也不能删.</p>
+</aside>
+</div>
 {{end}}

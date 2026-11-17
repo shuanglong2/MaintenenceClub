@@ -51,10 +51,16 @@ func TestPeopleFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.List(ctx, memberSession.User); !errors.Is(err, ErrForbidden) {
-		t.Fatalf("组员不能看名单: %v", err)
+	views, err := svc.List(ctx, memberSession.User)
+	if err != nil {
+		t.Fatal(err)
 	}
-	views, err := svc.List(ctx, session.User)
+	for _, view := range views {
+		if view.ID != memberSession.User.ID && view.Contact != "" {
+			t.Fatalf("组员看见了别人的联系方式: %+v", view)
+		}
+	}
+	views, err = svc.List(ctx, session.User)
 	if err != nil {
 		t.Fatal(err)
 	}

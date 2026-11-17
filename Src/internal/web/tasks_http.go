@@ -129,9 +129,13 @@ func (s *server) tasksList(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	status := r.URL.Query().Get("status")
+	if status == "done" || status == "cancelled" {
+		status = ""
+	}
 	filter := tasks.Filter{
-		Kind: r.URL.Query().Get("kind"), Status: r.URL.Query().Get("status"),
-		Query: strings.TrimSpace(r.URL.Query().Get("q")), ShowDone: r.URL.Query().Get("done") == "1",
+		Kind: r.URL.Query().Get("kind"), Status: status,
+		Query: strings.TrimSpace(r.URL.Query().Get("q")),
 	}
 	items, err := s.tasks.Desk(r.Context(), actor, filter)
 	if err != nil {
@@ -145,7 +149,7 @@ func (s *server) tasksList(w http.ResponseWriter, r *http.Request) {
 	view := taskView{
 		Tasks: cards, Kinds: tasks.RepairKinds(), Statuses: tasks.Statuses(),
 		Kind: filter.Kind, Status: filter.Status, Query: filter.Query, ShowDone: filter.ShowDone,
-		Leader: actor.Role == people.RoleLeader,
+		Leader: actor.Role == people.RoleLeader || actor.Role == people.RoleDeputy,
 	}
 	if raw := r.URL.Query().Get("id"); raw != "" {
 		if id, err := strconv.ParseInt(raw, 10, 64); err == nil && id > 0 {
@@ -204,7 +208,7 @@ func (s *server) tasksNew(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if actor.Role != people.RoleLeader {
+	if actor.Role != people.RoleLeader && actor.Role != people.RoleDeputy {
 		s.showTaskErr(w, r, tasks.ErrForbidden)
 		return
 	}
@@ -245,7 +249,7 @@ func (s *server) tasksCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if actor.Role != people.RoleLeader {
+	if actor.Role != people.RoleLeader && actor.Role != people.RoleDeputy {
 		s.showTaskErr(w, r, tasks.ErrForbidden)
 		return
 	}

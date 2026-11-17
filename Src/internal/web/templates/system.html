@@ -1,10 +1,10 @@
 {{define "system-body"}}
 <header class="page-head">
 <h1>系统状态</h1>
-<p class="lead">每 3 秒刷新一次.</p>
+<p class="lead">每 1 秒刷新一次.</p>
 </header>
 {{if .Sys.Warn}}<p class="error">{{.Sys.Warn}}</p>{{end}}
-<div id="sys-live" hx-get="/system/live" hx-trigger="every 3s" hx-swap="innerHTML">
+<div id="sys-live" hx-get="/system/live" hx-trigger="every 1s" hx-swap="innerHTML">
 {{template "system-live" .}}
 </div>
 {{end}}
@@ -13,32 +13,50 @@
 <div class="meters">
 <article>
 <h2>CPU</h2>
-<p class="meter-value">{{.Sys.CPU}}</p>
+<p class="meter-value">总负载 {{.Sys.CPU}}</p>
 <div class="meter"><i style="width: {{.Sys.CPUPct}}%"></i></div>
+<p class="meta">{{if .Sys.Cores}}{{.Sys.Cores}}{{else}}核心负载暂无{{end}}</p>
 </article>
 <article>
 <h2>内存</h2>
 <p class="meter-value">{{.Sys.Mem}}</p>
 <div class="meter"><i style="width: {{.Sys.MemPct}}%"></i></div>
+<p class="meta">Swap {{if .Sys.Swap}}{{.Sys.Swap}}{{else}}未知{{end}}</p>
+<p class="meta">Zram {{if .Sys.Zram}}{{.Sys.Zram}}{{else}}未知{{end}}</p>
 </article>
 <article>
-<h2>储存</h2>
+<h2>存储</h2>
 <p class="meter-value">{{.Sys.DiskUsed}} / {{.Sys.DiskTotal}}</p>
 <div class="meter"><i style="width: {{.Sys.DiskPct}}%"></i></div>
 <p class="meta">磁盘剩余 {{.Sys.DiskFree}}</p>
 </article>
 <article>
 <h2>网络</h2>
-<p class="meter-value">{{.Sys.NetRate}}</p>
-<p class="meta">{{.Sys.NetTotal}}</p>
+<p class="meter-value">上传 {{if .Sys.Up}}{{.Sys.Up}}{{else}}未知{{end}}</p>
+<div class="meter"><i style="width: {{.Sys.TxPct}}%"></i></div>
+<p class="meta">下载 {{if .Sys.Down}}{{.Sys.Down}}{{else}}未知{{end}}</p>
+<div class="meter"><i style="width: {{.Sys.RxPct}}%"></i></div>
 </article>
 </div>
-<dl class="status-extra">
-<div><dt>数据库</dt><dd>{{.Sys.DBSize}}{{if .Sys.DBConn}}, {{.Sys.DBConn}}{{end}}</dd></div>
-<div><dt>上传占用</dt><dd>{{.Sys.UploadUsed}} / {{.Sys.UploadMax}}</dd></div>
-<div><dt>最近备份</dt><dd>{{.Sys.BackupAt}} {{.Sys.BackupText}}</dd></div>
-<div><dt>进程内存</dt><dd>{{.Sys.Memory}}</dd></div>
-<div><dt>版本</dt><dd>{{.Sys.Version}}</dd></div>
-<div><dt>提交</dt><dd>{{.Sys.Commit}}</dd></div>
-</dl>
+<div class="status-list">
+<article>
+<h2>服务端进程</h2>
+<p>内存 {{.Sys.Memory}}</p>
+<p>硬盘 {{if .Sys.ProcIO}}{{.Sys.ProcIO}}{{else}}未知{{end}}</p>
+<p>网络 {{.Sys.NetRate}}</p>
+<p>版本 {{.Sys.Version}} {{.Sys.Commit}}</p>
+</article>
+<article>
+<h2>数据库</h2>
+<p>占用 {{.Sys.DBSize}}</p>
+<p>{{if .Sys.DBConn}}{{.Sys.DBConn}}{{else}}连接数未知{{end}}</p>
+<p>60 秒内平均查询 {{.Sys.DBLatency}}</p>
+</article>
+<article>
+<h2>存储占用</h2>
+<p>文档 {{.Sys.DocsUsed}}</p>
+<p>头像和其他 {{.Sys.AvatarUsed}}</p>
+<p>最近备份 {{.Sys.BackupAt}} {{.Sys.BackupText}}</p>
+</article>
+</div>
 {{end}}

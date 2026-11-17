@@ -1051,7 +1051,46 @@ main:has(.work) {
   border-radius: 999px;
 }
 
+dialog {
+  border: 0;
+  border-radius: 1rem;
+  padding: 1rem 1.1rem;
+  max-width: 28rem;
+  width: calc(100% - 2rem);
+  background: #fffaf4;
+  color: inherit;
+}
+
+dialog::backdrop {
+  background: rgba(20, 24, 22, 0.45);
+}
+
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.status-list {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.status-list article {
+  padding: 0.9rem 1rem;
+  background: #fffaf4;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.9rem;
+}
+
 @media (max-width: 720px) {
+  .desk-only {
+    display: none !important;
+  }
+
   .cal {
     display: none;
   }

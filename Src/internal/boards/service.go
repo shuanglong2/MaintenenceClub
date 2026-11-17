@@ -42,7 +42,7 @@ type Actor struct {
 }
 
 func (a Actor) leader() bool {
-	return a.Active && a.Role == people.RoleLeader
+	return a.Active && (a.Role == people.RoleLeader || a.Role == people.RoleDeputy)
 }
 
 // Leader 表示当前人是在任组长.
@@ -249,7 +249,7 @@ RETURNING id`, board, clean.Title, clean.Summary, clean.Contact, clean.Kind, cle
 		return Item{}, err
 	}
 	if err := audit.Write(ctx, tx, audit.Event{
-		ActorID: actor.ID, ActorName: actor.Name, IP: actor.IP, Action: "boards.create",
+		ActorID: actor.ID, ActorName: actor.Name, IP: actor.IP, Action: board + ".create",
 		Entity: "board", EntityID: &id, Summary: "新建 " + clean.Title,
 	}); err != nil {
 		return Item{}, err
@@ -275,6 +275,7 @@ func (s *Service) SetStatus(ctx context.Context, actor Actor, id int64, status s
 	if tag.RowsAffected() == 0 {
 		return ErrNotFound
 	}
+	s.note(ctx, actor, id, ".status", "修改状态")
 	return nil
 }
 
@@ -297,6 +298,9 @@ func (s *Service) Join(ctx context.Context, actor Actor, id int64) error {
 	_, err = s.pool.Exec(ctx, `
 INSERT INTO boards.members (item_id, person_id, person_name) VALUES ($1, $2, $3)
 ON CONFLICT DO NOTHING`, id, actor.ID, actor.Name)
+	if err == nil {
+		s.note(ctx, actor, id, ".join", "参加")
+	}
 	return err
 }
 
@@ -306,6 +310,9 @@ func (s *Service) Leave(ctx context.Context, actor Actor, id int64) error {
 		return ErrForbidden
 	}
 	_, err := s.pool.Exec(ctx, `DELETE FROM boards.members WHERE item_id = $1 AND person_id = $2`, id, actor.ID)
+	if err == nil {
+		s.note(ctx, actor, id, ".leave", "退出")
+	}
 	return err
 }
 
@@ -333,7 +340,29 @@ func (s *Service) Assign(ctx context.Context, actor Actor, id, personID int64) e
 	_, err = s.pool.Exec(ctx, `
 INSERT INTO boards.members (item_id, person_id, person_name) VALUES ($1, $2, $3)
 ON CONFLICT DO NOTHING`, id, personID, name)
+	if err == nil {
+		s.note(ctx, actor, id, ".assign", "指派参加 "+name)
+	}
 	return err
+}
+
+func (s *Service) note(ctx context.Context, actor Actor, id int64, suffix, summary string) {
+	var board string
+	if err := s.pool.QueryRow(ctx, `SELECT board FROM boards.items WHERE id = $1`, id).Scan(&board); err != nil {
+		return
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback(ctx)
+	if err := audit.Write(ctx, tx, audit.Event{
+		ActorID: actor.ID, ActorName: actor.Name, IP: actor.IP, Action: board + suffix,
+		Entity: "board", EntityID: &id, Summary: summary,
+	}); err != nil {
+		return
+	}
+	_ = tx.Commit(ctx)
 }
 
 // People 返回仍在组的人, 供指派.

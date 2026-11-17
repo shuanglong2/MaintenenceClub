@@ -42,11 +42,17 @@ type Input struct {
 	Login     string
 	Role      string
 	Finance   bool
-	StudentID string
-	ClassName string
-	Contact   string
-	Note      string
-	Password  string
+	StudentID  string
+	ClassName  string
+	Contact    string
+	Note       string
+	Password   string
+	QQ         string
+	Phone      string
+	Bio        string
+	Birthday   string
+	Website    string
+	Department string
 }
 
 // Actor 是当前操作的人. 命令行创建首个账号时 ID 为 0.
@@ -79,6 +85,12 @@ type Person struct {
 	Status     string
 	Note       string
 	MustChange bool
+	QQ         string
+	Phone      string
+	Bio        string
+	Birthday   string
+	Website    string
+	Department string
 }
 
 // PersonView 是按查看者权限过滤后的人员.
@@ -101,6 +113,12 @@ type PersonView struct {
 	MustChange    bool
 	CanEdit       bool
 	ShowSensitive bool
+	QQ            string
+	Phone         string
+	Bio           string
+	Birthday      string
+	Website       string
+	Department    string
 }
 
 // Session 是一次成功的登录.
@@ -164,8 +182,21 @@ func (s *Service) CreateFirst(ctx context.Context, login, password string) error
 
 // Create 由组长新建人员, 并返回只显示一次的初始密码.
 func (s *Service) Create(ctx context.Context, actor Actor, in Input) (string, error) {
-	if !Can(actor.user(), ActPeopleManage, Resource{}) {
+	if !Can(actor.user(), ActPeopleManage, Resource{Role: in.Role}) && !Can(actor.user(), ActPeopleManage, Resource{}) {
 		return "", ErrForbidden
+	}
+	role, roleErr := ParseRole(in.Role)
+	if roleErr != nil {
+		return "", ErrBadInput
+	}
+	if role == RoleLeader && actor.Role != RoleLeader {
+		return "", ErrForbidden
+	}
+	in.Role = role
+	if login, err := normalizeLogin(in.Login); err == nil {
+		if _, found := s.loadByLogin(ctx, login); found == nil {
+			return "", ErrUseCard
+		}
 	}
 	password := in.Password
 	if password == "" {
@@ -220,13 +251,18 @@ func (s *Service) Update(ctx context.Context, actor Actor, id int64, in Input) e
 	if err != nil {
 		return err
 	}
+	if !Can(actor.user(), ActPeopleManage, Resource{Role: current.Role}) || !Can(actor.user(), ActPeopleManage, Resource{Role: in.Role}) {
+		return ErrForbidden
+	}
 	if err := AllowLeaderChange(leaders, current.Role == RoleLeader && current.Status == StatusActive, in.Role, current.Status); err != nil {
 		return err
 	}
 	_, err = tx.Exec(ctx, `
 UPDATE people.people
-SET name = $2, role = $3, finance = $4, student_id = $5, class_name = $6, contact = $7, note = $8
-WHERE id = $1`, id, in.Name, in.Role, in.Finance, in.StudentID, strings.TrimSpace(in.ClassName), in.Contact, in.Note)
+SET name = $2, role = $3, finance = $4, student_id = $5, class_name = $6, contact = $7, note = $8,
+    qq = $9, phone = $10, bio = $11, website = $12, department = $13, birthday = NULLIF($14, '')::date
+WHERE id = $1`, id, in.Name, in.Role, in.Finance, in.StudentID, strings.TrimSpace(in.ClassName), in.Contact, in.Note,
+		strings.TrimSpace(in.QQ), strings.TrimSpace(in.Phone), strings.TrimSpace(in.Bio), strings.TrimSpace(in.Website), strings.TrimSpace(in.Department), strings.TrimSpace(in.Birthday))
 	if err != nil {
 		return err
 	}
@@ -266,6 +302,9 @@ func (s *Service) setStatus(ctx context.Context, actor Actor, id int64, status, 
 	if err != nil {
 		return err
 	}
+	if !Can(actor.user(), ActPeopleManage, Resource{Role: current.Role}) {
+		return ErrForbidden
+	}
 	if err := AllowLeaderChange(leaders, current.Role == RoleLeader && current.Status == StatusActive, current.Role, status); err != nil {
 		return err
 	}
@@ -286,7 +325,11 @@ func (s *Service) setStatus(ctx context.Context, actor Actor, id int64, status, 
 
 // ResetPassword 生成新密码, 要求下次登录修改, 并作废全部会话.
 func (s *Service) ResetPassword(ctx context.Context, actor Actor, id int64) (string, error) {
-	if !Can(actor.user(), ActPeopleManage, Resource{}) {
+	person, err := s.load(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	if !Can(actor.user(), ActPeopleManage, Resource{Role: person.Role}) {
 		return "", ErrForbidden
 	}
 	return s.reset(ctx, actor, id)
@@ -471,8 +514,16 @@ func (s *Service) Login(ctx context.Context, login, password, ip string, now tim
 	if checkErr != nil {
 		return Session{}, checkErr
 	}
-	if !ok || person.ID == 0 || person.Status != StatusActive {
+	blocked := person.Role == RoleGuest || person.Role == RoleBlacklist
+	if !ok || person.ID == 0 || person.Status != StatusActive || blocked {
 		s.limit.Fail(key, now)
+		who := login
+		var id int64
+		if person.ID != 0 {
+			who = person.Name
+			id = person.ID
+		}
+		s.noteLogin(ctx, id, who, ip, "login.fail", "登录失败")
 		return Session{}, ErrBadLogin
 	}
 	s.limit.Success(key)
@@ -487,6 +538,7 @@ VALUES ($1, $2, $3, $4, $5)`,
 	if err != nil {
 		return Session{}, err
 	}
+	s.noteLogin(ctx, person.ID, person.Name, ip, "login.ok", "登录成功")
 	return Session{
 		Token: raw, CSRF: csrf, Name: person.Name, Login: person.Login, MustChange: person.MustChange,
 		User: User{ID: person.ID, Role: person.Role, Finance: person.Finance, Active: true},
@@ -582,6 +634,9 @@ func (s *Service) insert(ctx context.Context, tx pgx.Tx, in Input) (Person, erro
 	if err != nil {
 		return Person{}, err
 	}
+	if strings.TrimSpace(in.StudentID) == "" {
+		in.StudentID = login
+	}
 	in.Name = strings.TrimSpace(in.Name)
 	if in.Name == "" {
 		in.Name = login
@@ -595,10 +650,11 @@ func (s *Service) insert(ctx context.Context, tx pgx.Tx, in Input) (Person, erro
 	}
 	var person Person
 	err = tx.QueryRow(ctx, `
-INSERT INTO people.people (name, login_name, password_hash, role, finance, student_id, contact, note, status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
+INSERT INTO people.people (name, login_name, password_hash, role, finance, student_id, contact, note, status, class_name, qq, phone, bio, website, department, birthday)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', $9, $10, $11, $12, $13, $14, NULLIF($15, '')::date)
 RETURNING id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password, class_name, coalesce(avatar_id, 0)`,
 		in.Name, login, hash, role, in.Finance, strings.TrimSpace(in.StudentID), strings.TrimSpace(in.Contact), strings.TrimSpace(in.Note),
+		strings.TrimSpace(in.ClassName), strings.TrimSpace(in.QQ), strings.TrimSpace(in.Phone), strings.TrimSpace(in.Bio), strings.TrimSpace(in.Website), strings.TrimSpace(in.Department), strings.TrimSpace(in.Birthday),
 	).Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange, &person.ClassName, &person.AvatarID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -660,7 +716,8 @@ func (s *Service) loadByLogin(ctx context.Context, login string) (Person, error)
 }
 
 const personSelect = `
-SELECT id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password, class_name, coalesce(avatar_id, 0)
+SELECT id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password, class_name, coalesce(avatar_id, 0),
+       qq, phone, bio, coalesce(to_char(birthday, 'YYYY-MM-DD'), ''), website, department
 FROM people.people`
 
 type scanner interface {
@@ -669,7 +726,7 @@ type scanner interface {
 
 func scanPerson(row scanner) (Person, error) {
 	var person Person
-	err := row.Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange, &person.ClassName, &person.AvatarID)
+	err := row.Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange, &person.ClassName, &person.AvatarID, &person.QQ, &person.Phone, &person.Bio, &person.Birthday, &person.Website, &person.Department)
 	return person, err
 }
 
@@ -678,30 +735,27 @@ func Visible(viewer User, person Person) PersonView {
 	view := PersonView{
 		ID: person.ID, Name: person.Name, Role: person.Role, RoleLabel: RoleLabel(person.Role),
 		Joined: person.Joined, Status: person.Status, StatusLabel: StatusLabel(person.Status),
+		StudentID: person.StudentID, Login: person.Login, QQ: person.QQ, Department: person.Department,
+		ClassName: person.ClassName, AvatarID: person.AvatarID, Bio: person.Bio, Website: person.Website, Birthday: person.Birthday,
+	}
+	if view.StudentID == "" {
+		view.StudentID = person.Login
 	}
 	view.ShowSensitive = Can(viewer, ActPeopleSensitive, Resource{OwnerID: person.ID})
-	view.CanEdit = Can(viewer, ActPeopleManage, Resource{})
+	view.CanEdit = Can(viewer, ActPeopleManage, Resource{Role: person.Role})
 	view.ShowFinance = (viewer.Active && (viewer.Role == RoleLeader || viewer.Role == RoleDeputy)) || viewer.ID == person.ID
 	if view.ShowSensitive {
-		view.StudentID = person.StudentID
 		view.Contact = person.Contact
-		view.Login = person.Login
 		view.Note = person.Note
+		view.Phone = person.Phone
 	}
 	if view.ShowFinance {
 		view.Finance = person.Finance
 	}
 	if viewer.ID == person.ID {
 		view.MustChange = person.MustChange
-		view.Login = person.Login
 		view.Contact = person.Contact
-		view.StudentID = person.StudentID
-		view.ClassName = person.ClassName
-		view.AvatarID = person.AvatarID
-	}
-	if view.ShowSensitive {
-		view.ClassName = person.ClassName
-		view.AvatarID = person.AvatarID
+		view.Phone = person.Phone
 	}
 	if !view.ShowSensitive && viewer.ID != person.ID {
 		view.Note = ""
@@ -717,6 +771,11 @@ func (s *Service) UpdateSelf(ctx context.Context, actor Actor, in Input) error {
 	in.Name = strings.TrimSpace(in.Name)
 	in.ClassName = strings.TrimSpace(in.ClassName)
 	in.StudentID = strings.TrimSpace(in.StudentID)
+	in.QQ = strings.TrimSpace(in.QQ)
+	in.Phone = strings.TrimSpace(in.Phone)
+	in.Bio = strings.TrimSpace(in.Bio)
+	in.Website = strings.TrimSpace(in.Website)
+	in.Birthday = strings.TrimSpace(in.Birthday)
 	if in.Name == "" {
 		in.Name = in.StudentID
 	}
@@ -729,8 +788,9 @@ func (s *Service) UpdateSelf(ctx context.Context, actor Actor, in Input) error {
 	}
 	tag, err := s.pool.Exec(ctx, `
 UPDATE people.people
-SET name = $2, login_name = $3, student_id = $3, class_name = $4
-WHERE id = $1`, actor.ID, in.Name, login, in.ClassName)
+SET name = $2, login_name = $3, student_id = $3, class_name = $4,
+    qq = $5, phone = $6, bio = $7, website = $8, birthday = NULLIF($9, '')::date
+WHERE id = $1`, actor.ID, in.Name, login, in.ClassName, in.QQ, in.Phone, in.Bio, in.Website, in.Birthday)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -766,7 +826,97 @@ func validateText(in Input) error {
 	if utf8.RuneCountInString(in.StudentID) > 32 || utf8.RuneCountInString(in.ClassName) > 40 || utf8.RuneCountInString(in.Contact) > 80 || utf8.RuneCountInString(in.Note) > 500 {
 		return ErrBadInput
 	}
+	if utf8.RuneCountInString(in.QQ) > 20 || utf8.RuneCountInString(in.Phone) > 20 || utf8.RuneCountInString(in.Bio) > 500 || utf8.RuneCountInString(in.Website) > 200 {
+		return ErrBadInput
+	}
+	if in.Department != "" {
+		ok := false
+		for _, name := range Departments() {
+			if in.Department == name {
+				ok = true
+			}
+		}
+		if !ok {
+			return ErrBadInput
+		}
+	}
+	if in.Birthday != "" {
+		if _, err := time.Parse("2006-01-02", in.Birthday); err != nil {
+			return ErrBadInput
+		}
+	}
 	return nil
+}
+
+func (s *Service) noteLogin(ctx context.Context, id int64, name, ip, action, summary string) {
+	if name == "" {
+		name = "未知"
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return
+	}
+	defer tx.Rollback(ctx)
+	if err := audit.Write(ctx, tx, audit.Event{
+		ActorID: id, ActorName: name, IP: ip, Action: action, Entity: "session", Summary: summary,
+	}); err != nil {
+		return
+	}
+	_ = tx.Commit(ctx)
+}
+
+// Demote 把组长或副组长换成组员, 资料保留.
+func (s *Service) Demote(ctx context.Context, actor Actor, id int64) error {
+	return s.shiftRole(ctx, actor, id, RoleMember, "people.demote", "换届为组员", true)
+}
+
+// Kick 把人移入黑名单, 之后不能登录.
+func (s *Service) Kick(ctx context.Context, actor Actor, id int64) error {
+	return s.shiftRole(ctx, actor, id, RoleBlacklist, "people.kick", "踢出并列入黑名单", false)
+}
+
+func (s *Service) shiftRole(ctx context.Context, actor Actor, id int64, role, action, summary string, leadersOnly bool) error {
+	if !Can(actor.user(), ActPeopleManage, Resource{}) {
+		return ErrForbidden
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	leaders, err := s.lockLeaders(ctx, tx)
+	if err != nil {
+		return err
+	}
+	current, err := s.loadLocked(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if !Can(actor.user(), ActPeopleManage, Resource{Role: current.Role}) {
+		return ErrForbidden
+	}
+	if leadersOnly && current.Role != RoleLeader && current.Role != RoleDeputy {
+		return ErrBadInput
+	}
+	if !leadersOnly && current.Role != RoleLeader && current.Role != RoleDeputy && current.Role != RoleMember {
+		return ErrBadInput
+	}
+	if err := AllowLeaderChange(leaders, current.Role == RoleLeader && current.Status == StatusActive, role, current.Status); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE people.people SET role = $2 WHERE id = $1`, id, role); err != nil {
+		return err
+	}
+	if role == RoleBlacklist {
+		if _, err := tx.Exec(ctx, `DELETE FROM people.sessions WHERE person_id = $1`, id); err != nil {
+			return err
+		}
+	}
+	current.Role = role
+	if err := s.auditPerson(ctx, tx, actor, action, id, summary+" "+current.Name, current); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func normalizeLogin(login string) (string, error) {

@@ -1,6 +1,26 @@
 {{define "gather-body"}}
 <header class="page-head">
 <h1>{{.Title}}</h1>
+{{if .Gather.Leader}}
+<p class="desk-only"><button type="button" class="go" data-open="gather-box">创建</button></p>
+<dialog id="gather-box">
+<form class="stack" method="post" action="{{.Gather.Base}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>新建</h2>
+<label>标题<input name="title" required></label>
+<label>类型<select name="kind">{{range .Gather.Kinds}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>简介<textarea name="summary" rows="4"></textarea></label>
+<label>联系方式<input name="contact"></label>
+<label>地点<input name="place"></label>
+<label>开始日期<input type="date" name="start_date"></label>
+<label>开始时间<input type="time" name="start_clock"></label>
+<label>结束日期<input type="date" name="end_date"></label>
+<label>结束时间<input type="time" name="end_clock"></label>
+<button type="submit">创建</button>
+<button type="button" data-close>取消</button>
+</form>
+</dialog>
+{{end}}
 </header>
 <div class="work">
 <aside class="work-side">
@@ -14,13 +34,11 @@
 <label>状态
 <select name="status">
 <option value="">未归档</option>
-{{range .Gather.Statuses}}<option value="{{.}}" {{if eq . $.Gather.Status}}selected{{end}}>{{boardStatus .}}</option>{{end}}
+{{range .Gather.Statuses}}{{if ne . "done"}}<option value="{{.}}" {{if eq . $.Gather.Status}}selected{{end}}>{{boardStatus .}}</option>{{end}}{{end}}
 </select>
 </label>
-<label class="check"><input type="checkbox" name="done" value="1" {{if .Gather.ShowDone}}checked{{end}}> 显示已完成</label>
 <button type="submit">筛选</button>
 </form>
-{{if .Gather.Leader}}<p class="tools"><a class="go" href="{{.Gather.Base}}?new=1">新建</a></p>{{end}}
 </aside>
 <section class="work-list">
 <form class="search-bar" method="get" action="{{.Gather.Base}}">
@@ -71,7 +89,7 @@
 {{end}}
 </div>
 {{if .Gather.Leader}}
-<form class="stack" method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/status">
+<form class="stack desk-only" method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/status">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>状态
 <select name="status">
@@ -80,7 +98,7 @@
 </label>
 <button type="submit">保存状态</button>
 </form>
-<form class="stack" method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/assign">
+<form class="stack desk-only" method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/assign">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>指派参加
 <select name="person">{{range .Gather.People}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>

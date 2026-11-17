@@ -4,9 +4,11 @@ import "errors"
 
 // 角色与权限常量. 矩阵见 Can 的测试, 对应 Plan1 第 3 节.
 const (
-	RoleLeader = "leader"
-	RoleDeputy = "deputy"
-	RoleMember = "member"
+	RoleLeader    = "leader"
+	RoleDeputy    = "deputy"
+	RoleMember    = "member"
+	RoleGuest     = "guest"
+	RoleBlacklist = "blacklist"
 
 	StatusActive = "active"
 	StatusExited = "exited"
@@ -40,9 +42,10 @@ type User struct {
 	Active  bool
 }
 
-// Resource 是被操作的对象. OwnerID 为 0 表示与具体的人无关.
+// Resource 是被操作的对象. OwnerID 为 0 表示与具体的人无关. Role 是被操作的人的职务.
 type Resource struct {
 	OwnerID int64
+	Role    string
 }
 
 // Can 判断这个人能否做这件事.
@@ -52,12 +55,17 @@ func Can(user User, action string, resource Resource) bool {
 	}
 	self := resource.OwnerID != 0 && resource.OwnerID == user.ID
 	switch action {
-	case ActPeopleManage, ActSystemManage:
-		return user.Role == RoleLeader
+	case ActPeopleManage:
+		if user.Role == RoleLeader {
+			return true
+		}
+		return user.Role == RoleDeputy && resource.Role != RoleLeader
+	case ActSystemManage, ActFinanceRead, ActFinanceWrite:
+		return management(user)
 	case ActPeopleSelf, ActTaskCreate, ActEventJoin, ActInventoryUse, ActDocsEdit:
 		return true
-	case ActPeopleList, ActFinanceRead, ActFinanceWrite:
-		return user.Role == RoleLeader
+	case ActPeopleList:
+		return user.Role == RoleLeader || user.Role == RoleDeputy || user.Role == RoleMember
 	case ActPeopleSensitive:
 		return management(user) || self
 	case ActAuditRead, ActTaskEditAll, ActEventEdit, ActLogEditAll, ActInventoryManage, ActDocsVisibility:
@@ -82,6 +90,10 @@ func RoleLabel(role string) string {
 		return "副组长"
 	case RoleMember:
 		return "组员"
+	case RoleGuest:
+		return "访客"
+	case RoleBlacklist:
+		return "黑名单"
 	default:
 		return role
 	}
@@ -96,9 +108,18 @@ func ParseRole(value string) (string, error) {
 		return RoleDeputy, nil
 	case RoleMember, "组员":
 		return RoleMember, nil
+	case RoleGuest, "访客":
+		return RoleGuest, nil
+	case RoleBlacklist, "黑名单":
+		return RoleBlacklist, nil
 	default:
 		return "", errBadRole
 	}
+}
+
+// Departments 是人员卡片上的部门.
+func Departments() []string {
+	return []string{"维修部", "竞赛部", "科普部", "创新部", "管理部"}
 }
 
 // StatusLabel 返回状态名称.

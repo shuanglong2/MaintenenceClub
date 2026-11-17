@@ -2,6 +2,22 @@
 <header class="page-head">
 <h1>任务</h1>
 <p class="lead">维修接单. 自己接的在前, 紧急的其次, 还没人接的再后.</p>
+{{if .Task.Leader}}
+<p class="desk-only"><button type="button" class="go" data-open="task-box">创建</button></p>
+<dialog id="task-box">
+<form class="stack" method="post" action="/tasks">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>新建任务</h2>
+<label>标题<input name="title" required></label>
+<label>类型<select name="kind">{{range .Task.Kinds}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>联系方式<input name="contact"></label>
+<label>说明<textarea name="body" rows="4"></textarea></label>
+<label class="check"><input type="checkbox" name="urgent" value="1"> 紧急</label>
+<button type="submit">创建</button>
+<button type="button" data-close>取消</button>
+</form>
+</dialog>
+{{end}}
 </header>
 <div class="work">
 <aside class="work-side">
@@ -15,13 +31,11 @@
 <label>状态
 <select name="status">
 <option value="">未归档</option>
-{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}
+{{range .Task.Statuses}}{{if and (ne . "done") (ne . "cancelled")}}<option value="{{.}}" {{if eq . $.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}{{end}}
 </select>
 </label>
-<label class="check"><input type="checkbox" name="done" value="1" {{if .Task.ShowDone}}checked{{end}}> 显示已完成</label>
 <button type="submit">筛选</button>
 </form>
-{{if .Task.Leader}}<p class="tools"><a class="go" href="/tasks/new">新建任务</a></p>{{end}}
 </aside>
 <section class="work-list">
 <form class="search-bar" method="get" action="/tasks">
@@ -57,7 +71,7 @@
 {{end}}
 </div>
 {{if and .Task.Leader (or (eq .Task.Task.Status "todo") (eq .Task.Task.Status "doing"))}}
-<form class="stack" method="post" action="/tasks/{{.Task.Task.ID}}/assign">
+<form class="stack desk-only" method="post" action="/tasks/{{.Task.Task.ID}}/assign">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>指派
 <select name="person">

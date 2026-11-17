@@ -35,9 +35,13 @@ func (s *server) gatherList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	board := boardOf(r)
+	status := r.URL.Query().Get("status")
+	if status == "done" {
+		status = ""
+	}
 	filter := boards.Filter{
-		Kind: r.URL.Query().Get("kind"), Status: r.URL.Query().Get("status"),
-		Query: strings.TrimSpace(r.URL.Query().Get("q")), ShowDone: r.URL.Query().Get("done") == "1",
+		Kind: r.URL.Query().Get("kind"), Status: status,
+		Query: strings.TrimSpace(r.URL.Query().Get("q")),
 	}
 	items, err := s.boards.List(r.Context(), actor, board, filter)
 	if err != nil {

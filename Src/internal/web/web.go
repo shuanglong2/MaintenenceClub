@@ -90,10 +90,16 @@ type page struct {
 	User       *userView
 	ShowAudit  bool
 	ShowManage bool
+	ShowLead   bool
 	Finance    bool
+	Archive    []archiveRow
+	Quota      quotaView
 	People     []people.PersonView
 	Person     people.PersonView
 	HasPerson  bool
+	Depts      []string
+	PeopleRole string
+	PeopleDept string
 	Editing    bool
 	Audit      []auditRow
 	Filter     auditFilter
@@ -216,6 +222,10 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /people/{id}/exit", s.peopleExit)
 	mux.HandleFunc("POST /people/{id}/restore", s.peopleRestore)
 	mux.HandleFunc("POST /people/{id}/reset-password", s.peopleReset)
+	mux.HandleFunc("POST /people/{id}/demote", s.peopleDemote)
+	mux.HandleFunc("POST /people/{id}/kick", s.peopleKick)
+	mux.HandleFunc("GET /settings", s.settingsPage)
+	mux.HandleFunc("POST /settings", s.settingsSave)
 	mux.HandleFunc("GET /account", s.account)
 	mux.HandleFunc("POST /account/password", s.accountPassword)
 	mux.HandleFunc("POST /account/profile", s.accountProfile)
@@ -310,7 +320,8 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /tasks/{id}/comments", s.tasksComment)
 	mux.HandleFunc("POST /tasks/{id}", s.tasksUpdate)
 	mux.HandleFunc("GET /tasks/{id}", s.tasksShow)
-	mux.HandleFunc("GET /logs", s.logsList)
+	mux.HandleFunc("GET /logs", s.recordsList)
+	mux.HandleFunc("GET /logs/work", s.logsList)
 	mux.HandleFunc("GET /logs/new", s.logsNew)
 	mux.HandleFunc("POST /logs", s.logsCreate)
 	mux.HandleFunc("GET /logs/{id}/edit", s.logsEdit)

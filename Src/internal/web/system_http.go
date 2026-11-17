@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
@@ -41,6 +43,17 @@ type systemView struct {
 	CPUPct     int
 	MemPct     int
 	DiskPct    int
+	Cores      string
+	Swap       string
+	Zram       string
+	Down       string
+	Up         string
+	RxPct      int
+	TxPct      int
+	ProcIO     string
+	DBLatency  string
+	DocsUsed   string
+	AvatarUsed string
 }
 
 type hostView struct {
@@ -50,6 +63,14 @@ type hostView struct {
 	NetTotal string
 	CPUPct   int
 	MemPct   int
+	Cores    string
+	Swap     string
+	Zram     string
+	Down     string
+	Up       string
+	RxPct    int
+	TxPct    int
+	ProcIO   string
 }
 
 type backupStatus struct {
@@ -93,8 +114,13 @@ func (s *server) collectStatus(ctx context.Context) systemView {
 	view := systemView{
 		Version: buildinfo.Version, Commit: buildinfo.Commit, Built: buildinfo.Built,
 		Memory: processMemory(), CPU: host.CPU, Mem: host.Mem, NetRate: host.NetRate, NetTotal: host.NetTotal,
-		CPUPct: host.CPUPct, MemPct: host.MemPct,
+		CPUPct: host.CPUPct, MemPct: host.MemPct, Cores: host.Cores, Swap: host.Swap, Zram: host.Zram,
+		Down: host.Down, Up: host.Up, RxPct: host.RxPct, TxPct: host.TxPct, ProcIO: host.ProcIO,
 	}
+	docsUsed, sharedUsed := s.usage(ctx)
+	view.DocsUsed = formatBytes(uint64(docsUsed))
+	view.AvatarUsed = formatBytes(uint64(sharedUsed))
+	view.DBLatency = queryLatency()
 	root := "/srv/maintclub"
 	if store := s.uploads(); store != nil && store.Root() != "" {
 		root = store.Root()
@@ -158,15 +184,44 @@ func (s *server) databaseFacts(ctx context.Context) (string, string) {
 	if !ok {
 		return "未知", ""
 	}
+	started := time.Now()
 	var size, conns int64
 	err := q.QueryRow(ctx, `
 SELECT pg_database_size(current_database()), numbackends
 FROM pg_stat_database
 WHERE datname = current_database()`).Scan(&size, &conns)
+	noteQuery(time.Since(started))
 	if err != nil || size < 0 {
 		return "未知", ""
 	}
 	return formatBytes(uint64(size)), fmt.Sprintf("%d 个连接", conns)
+}
+
+var (
+	queryMu   sync.Mutex
+	queryCost []time.Duration
+)
+
+func noteQuery(cost time.Duration) {
+	queryMu.Lock()
+	queryCost = append(queryCost, cost)
+	if len(queryCost) > 60 {
+		queryCost = queryCost[len(queryCost)-60:]
+	}
+	queryMu.Unlock()
+}
+
+func queryLatency() string {
+	queryMu.Lock()
+	defer queryMu.Unlock()
+	if len(queryCost) == 0 {
+		return "暂无"
+	}
+	var sum time.Duration
+	for _, cost := range queryCost {
+		sum += cost
+	}
+	return fmt.Sprintf("%d 毫秒", (sum/time.Duration(len(queryCost))).Milliseconds())
 }
 
 func cpuPercent(prev, next []uint64) (int, bool) {

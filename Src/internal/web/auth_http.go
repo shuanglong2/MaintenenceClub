@@ -160,6 +160,7 @@ func (s *server) fill(r *http.Request, data *page) {
 	data.User = &userView{Name: user.Session.Name, MustChange: user.Session.MustChange}
 	data.ShowAudit = people.Can(user.Session.User, people.ActAuditRead, people.Resource{})
 	data.ShowManage = people.Can(user.Session.User, people.ActPeopleManage, people.Resource{})
+	data.ShowLead = user.Session.User.Role == people.RoleLeader
 	data.Finance = people.Can(user.Session.User, people.ActFinanceRead, people.Resource{})
 }
 

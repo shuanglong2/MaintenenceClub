@@ -1,6 +1,26 @@
 {{define "events-body"}}
 <h1>{{.Evt.MonthLabel}}</h1>
-<p class="tools"><a href="/events?month={{.Evt.Prev}}">上个月</a> <a href="/events?month={{.Evt.Next}}">下个月</a> <a href="/events/list">列表</a> {{if .Evt.Manage}}<a class="go" href="/events/new">添加日程</a>{{end}}</p>
+<p class="tools"><a href="/events?month={{.Evt.Prev}}">上个月</a> <a href="/events?month={{.Evt.Next}}">下个月</a> <a href="/events/list">列表</a>
+{{if .Evt.Manage}}<button type="button" class="go desk-only" data-open="event-box">添加日程</button>{{end}}</p>
+{{if .Evt.Manage}}
+<dialog id="event-box">
+<form class="stack" method="post" action="/events">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>添加日程</h2>
+<label>标题<input name="title" required></label>
+<label>类型<select name="kind"><option>例会</option><option>科普</option><option>竞赛</option><option>保养日</option><option>其他</option></select></label>
+<label>地点<input name="place"></label>
+<label class="check"><input type="checkbox" name="members" value="1"> 组员可见</label>
+<label>开始日期<input type="date" name="start_date" required></label>
+<label>开始时间<input type="time" name="start_clock" value="09:00"></label>
+<label>结束日期<input type="date" name="end_date" required></label>
+<label>结束时间<input type="time" name="end_clock" value="10:00"></label>
+<label>说明<textarea name="body" rows="3"></textarea></label>
+<button type="submit">创建</button>
+<button type="button" data-close>取消</button>
+</form>
+</dialog>
+{{end}}
 <div class="cal">
 {{range .Evt.Heads}}<div class="cal-head">{{.}}</div>{{end}}
 {{range .Evt.Days}}<div class="cal-day{{if not .InMonth}} muted{{end}}"><div class="cal-date">{{.Day}}</div>{{range .Items}}<a data-kind="{{.Kind}}" href="{{.URL}}">{{.Kind}} · {{.Title}}</a>{{end}}</div>{{end}}

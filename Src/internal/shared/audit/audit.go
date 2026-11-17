@@ -86,8 +86,9 @@ WHERE ($1::bigint IS NULL OR actor_id = $1)
   AND ($2 = '' OR action = $2)
   AND ($3::timestamptz IS NULL OR at >= $3)
   AND ($4::timestamptz IS NULL OR at < $4)
+  AND ($7 = '' OR action LIKE $7 || '%')
 ORDER BY at DESC, id DESC
-LIMIT $5 OFFSET $6`, q.ActorID, q.Action, q.From, q.Until, limit, q.Offset)
+LIMIT $5 OFFSET $6`, q.ActorID, q.Action, q.From, q.Until, limit, q.Offset, q.Prefix)
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +108,7 @@ LIMIT $5 OFFSET $6`, q.ActorID, q.Action, q.From, q.Until, limit, q.Offset)
 type Query struct {
 	ActorID *int64
 	Action  string
+	Prefix  string
 	From    *time.Time
 	Until   *time.Time
 	Limit   int

@@ -9,6 +9,7 @@ var (
 	ErrForbidden   = errors.New("没有权限")
 	ErrNotFound    = errors.New("没有这个人")
 	ErrLoginTaken  = errors.New("登录名已存在")
+	ErrUseCard     = errors.New("这个学号已经有人, 请打开对应卡片操作")
 	ErrNoSession   = errors.New("未登录")
 	ErrExists      = errors.New("已经有人员, 请在网站上创建")
 	ErrBadInput    = errors.New("填写的内容不正确")

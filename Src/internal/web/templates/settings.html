@@ -1,0 +1,12 @@
+{{define "settings-body"}}
+<h1>设置</h1>
+<p class="lead">文档和图片使用单独的空间. 数据库, 头像和其他文件共用另一块空间.</p>
+<form class="stack" method="post" action="/settings">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>文档空间 (GB)<input name="docs_gb" type="number" min="1" max="1024" value="{{.Quota.DocsGB}}" required></label>
+<p class="meta">已用 {{.Quota.DocsUsed}}</p>
+<label>其他空间 (GB)<input name="shared_gb" type="number" min="1" max="1024" value="{{.Quota.SharedGB}}" required></label>
+<p class="meta">已用 {{.Quota.SharedUsed}}</p>
+<button type="submit">保存</button>
+</form>
+{{end}}

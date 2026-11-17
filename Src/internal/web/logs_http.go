@@ -49,9 +49,9 @@ func (v logView) PageHref(page int) string {
 		q.Set("page", strconv.Itoa(page))
 	}
 	if encoded := q.Encode(); encoded != "" {
-		return "/logs?" + encoded
+		return "/logs/work?" + encoded
 	}
-	return "/logs"
+	return "/logs/work"
 }
 
 type logStock struct {
@@ -81,7 +81,7 @@ func (s *server) logsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, page{
-		Title: "日志", Body: "logs-body",
+		Title: "工作记录", Body: "logs-body",
 		Log: logView{
 			Entries: items, Kind: filter.Kind, Status: filter.Status, Mine: filter.Mine, Query: filter.Query,
 			Page: pageNo, HasNext: filter.Offset+len(items) < total, Total: total,

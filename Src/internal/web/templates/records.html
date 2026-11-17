@@ -1,0 +1,39 @@
+{{define "records-body"}}
+<header class="page-head">
+<h1>记录</h1>
+<p class="lead">这里查看已经归档的任务, 活动和竞赛.</p>
+</header>
+<div class="work">
+<aside class="work-side">
+<form class="stack" method="get" action="/logs">
+<label>类型
+<select name="kind">
+<option value="">全部</option>
+<option value="任务" {{if eq .PeopleRole "任务"}}selected{{end}}>任务</option>
+<option value="活动" {{if eq .PeopleRole "活动"}}selected{{end}}>活动</option>
+<option value="竞赛" {{if eq .PeopleRole "竞赛"}}selected{{end}}>竞赛</option>
+</select>
+</label>
+<button type="submit">筛选</button>
+</form>
+</aside>
+<section class="work-list">
+<form class="search-bar" method="get" action="/logs">
+<input type="hidden" name="kind" value="{{.PeopleRole}}">
+<label>搜索<input name="q" value="{{.PeopleDept}}" placeholder="标题"></label>
+<button type="submit">搜索</button>
+</form>
+{{if not .Archive}}<p class="empty">没有归档内容.</p>{{end}}
+{{range .Archive}}
+<a class="card-link" href="{{.Href}}">
+<strong>{{.Title}}</strong>
+<span>{{.Kind}}</span>
+<small>{{.Meta}}</small>
+</a>
+{{end}}
+</section>
+<aside class="work-detail">
+<p class="empty">点一条记录打开原来的详情.</p>
+</aside>
+</div>
+{{end}}

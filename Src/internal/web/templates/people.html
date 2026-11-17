@@ -1,17 +1,110 @@
 {{define "people-body"}}
+<header class="page-head">
 <h1>人员</h1>
-{{if .ShowManage}}<p class="tools"><a class="go" href="/people/new">新建</a> <a href="/people/import">导入</a></p>{{end}}
-{{if not .People}}<p class="empty">还没有人员.</p>{{else}}
-<div class="people-grid">
-{{range .People}}
-<a class="person-card" href="/people/{{.ID}}">
-{{if .AvatarID}}<img src="/files/{{.AvatarID}}" alt="">{{end}}
-<strong>{{.Name}}</strong>
-<span>{{.RoleLabel}} · {{.StatusLabel}}</span>
-{{if .ClassName}}<small>{{.ClassName}}</small>{{end}}
-{{if $.ShowAudit}}<small>{{.Login}}</small>{{end}}
-</a>
+{{if .ShowManage}}
+<p class="desk-only"><button type="button" class="go" data-open="person-box">添加人员</button></p>
+<dialog id="person-box">
+<form class="stack" method="post" action="/people">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>添加人员</h2>
+<label>学号<input name="login" required placeholder="用学号登录"></label>
+<label>姓名<input name="name"></label>
+<label>班级<input name="class_name"></label>
+<label>部门
+<select name="department">
+<option value="">未分组</option>
+{{range .Depts}}<option value="{{.}}">{{.}}</option>{{end}}
+</select>
+</label>
+<label>职务
+<select name="role">
+<option value="member">组员</option>
+<option value="deputy">副组长</option>
+{{if .ShowLead}}<option value="leader">组长</option>{{end}}
+<option value="guest">访客</option>
+<option value="blacklist">黑名单</option>
+</select>
+</label>
+<p class="hint">密码自动生成 8 位, 只显示一次. 学号已存在时不能在这里新建, 请打开那张卡片.</p>
+<button type="submit">创建</button>
+<button type="button" data-close>取消</button>
+</form>
+</dialog>
 {{end}}
+</header>
+<div class="work">
+<aside class="work-side">
+<form class="stack" method="get" action="/people">
+<label>职务
+<select name="role">
+<option value="">全部</option>
+<option value="leader" {{if eq .PeopleRole "leader"}}selected{{end}}>组长</option>
+<option value="deputy" {{if eq .PeopleRole "deputy"}}selected{{end}}>副组长</option>
+<option value="member" {{if eq .PeopleRole "member"}}selected{{end}}>组员</option>
+{{if .ShowManage}}
+<option value="guest" {{if eq .PeopleRole "guest"}}selected{{end}}>访客</option>
+<option value="blacklist" {{if eq .PeopleRole "blacklist"}}selected{{end}}>黑名单</option>
+{{end}}
+</select>
+</label>
+<label>部门
+<select name="dept">
+<option value="">全部</option>
+{{range .Depts}}<option value="{{.}}" {{if eq . $.PeopleDept}}selected{{end}}>{{.}}</option>{{end}}
+</select>
+</label>
+<button type="submit">筛选</button>
+</form>
+</aside>
+<section class="work-list">
+{{if not .People}}<p class="empty">没有符合的人.</p>{{end}}
+{{range .Depts}}
+{{$dept := .}}
+<h2>{{$dept}}</h2>
+{{range $.People}}{{if eq .Department $dept}}
+<a class="card-link{{if and $.HasPerson (eq .ID $.Person.ID)}} current{{end}}" href="/people?id={{.ID}}{{if $.PeopleRole}}&role={{$.PeopleRole}}{{end}}{{if $.PeopleDept}}&dept={{$.PeopleDept}}{{end}}">
+{{if .AvatarID}}<img class="avatar" src="/files/{{.AvatarID}}" alt="">{{end}}
+<strong>{{.Name}}</strong>
+<span>{{.StudentID}} · {{.RoleLabel}}</span>
+<small>{{if .QQ}}QQ {{.QQ}}{{else}}未填 QQ{{end}}</small>
+</a>
+{{end}}{{end}}
+{{end}}
+<h2>未分组</h2>
+{{range .People}}{{if not .Department}}
+<a class="card-link{{if and $.HasPerson (eq .ID $.Person.ID)}} current{{end}}" href="/people?id={{.ID}}{{if $.PeopleRole}}&role={{$.PeopleRole}}{{end}}">
+{{if .AvatarID}}<img class="avatar" src="/files/{{.AvatarID}}" alt="">{{end}}
+<strong>{{.Name}}</strong>
+<span>{{.StudentID}} · {{.RoleLabel}}</span>
+<small>{{if .QQ}}QQ {{.QQ}}{{else}}未填 QQ{{end}}</small>
+</a>
+{{end}}{{end}}
+</section>
+<aside class="work-detail">
+{{if .HasPerson}}
+<h2>{{.Person.Name}}</h2>
+{{if .Person.AvatarID}}<p><img class="avatar" src="/files/{{.Person.AvatarID}}" alt=""></p>{{end}}
+<p>{{.Person.StudentID}} · {{.Person.RoleLabel}}{{if .Person.Department}} · {{.Person.Department}}{{end}}</p>
+{{if .Person.ClassName}}<p>班级: {{.Person.ClassName}}</p>{{end}}
+{{if .Person.QQ}}<p>QQ: {{.Person.QQ}}</p>{{end}}
+{{if .Person.Phone}}<p>手机: {{.Person.Phone}}</p>{{end}}
+{{if .Person.Birthday}}<p>生日: {{.Person.Birthday}}</p>{{end}}
+{{if .Person.Website}}<p>网站: {{.Person.Website}}</p>{{end}}
+{{if .Person.Bio}}<p>{{.Person.Bio}}</p>{{end}}
+{{if .Person.CanEdit}}
+<div class="tools desk-only">
+{{if or (eq .Person.Role "leader") (eq .Person.Role "deputy")}}
+<form method="post" action="/people/{{.Person.ID}}/demote"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">换届</button></form>
+{{end}}
+{{if or (eq .Person.Role "leader") (eq .Person.Role "deputy") (eq .Person.Role "member")}}
+<form method="post" action="/people/{{.Person.ID}}/kick"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">踢出</button></form>
+{{end}}
+<form method="post" action="/people/{{.Person.ID}}/reset-password"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">重置密码</button></form>
 </div>
 {{end}}
+{{else}}
+<p class="empty">点一张卡片查看这个人.</p>
+{{end}}
+</aside>
+</div>
 {{end}}
