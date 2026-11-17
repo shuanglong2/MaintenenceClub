@@ -257,11 +257,18 @@ func (s *Service) Update(ctx context.Context, actor Actor, id int64, in Input) e
 	if err := AllowLeaderChange(leaders, current.Role == RoleLeader && current.Status == StatusActive, in.Role, current.Status); err != nil {
 		return err
 	}
+	studentID := strings.TrimSpace(in.StudentID)
+	if studentID == "" {
+		studentID = current.StudentID
+	}
+	if studentID == "" {
+		studentID = current.Login
+	}
 	_, err = tx.Exec(ctx, `
 UPDATE people.people
 SET name = $2, role = $3, finance = $4, student_id = $5, class_name = $6, contact = $7, note = $8,
     qq = $9, phone = $10, bio = $11, website = $12, department = $13, birthday = NULLIF($14, '')::date
-WHERE id = $1`, id, in.Name, in.Role, in.Finance, in.StudentID, strings.TrimSpace(in.ClassName), in.Contact, in.Note,
+WHERE id = $1`, id, in.Name, in.Role, in.Finance, studentID, strings.TrimSpace(in.ClassName), in.Contact, in.Note,
 		strings.TrimSpace(in.QQ), strings.TrimSpace(in.Phone), strings.TrimSpace(in.Bio), strings.TrimSpace(in.Website), strings.TrimSpace(in.Department), strings.TrimSpace(in.Birthday))
 	if err != nil {
 		return err
