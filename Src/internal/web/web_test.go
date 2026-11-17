@@ -44,7 +44,10 @@ func TestHome(t *testing.T) {
 		t.Fatalf("%s", body)
 	}
 	csp := rec.Header().Get("Content-Security-Policy")
-	if !strings.Contains(csp, "default-src 'self'") || strings.Contains(csp, "unsafe-inline") {
+	if !strings.Contains(csp, "default-src 'self'") || !strings.Contains(csp, "script-src 'self'") {
+		t.Fatal(csp)
+	}
+	if strings.Contains(csp, "script-src 'unsafe-inline'") || strings.Contains(csp, "script-src 'self' 'unsafe-inline'") {
 		t.Fatal(csp)
 	}
 	if rec.Header().Get("X-Content-Type-Options") != "nosniff" {

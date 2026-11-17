@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -58,6 +59,8 @@ type FolderNode struct {
 	Name     string
 	ParentID int64
 	Sort     int
+	Tone     string
+	Mark     string
 	Children []FolderNode
 	Pages    []PageLink
 }
@@ -183,20 +186,37 @@ func (s *Service) Folders(ctx context.Context, actor Actor) ([]FolderChoice, err
 	if !people.Can(actor.user(), people.ActDocsEdit, people.Resource{}) {
 		return nil, ErrForbidden
 	}
-	rows, err := s.pool.Query(ctx, `SELECT id, name FROM docs.folders ORDER BY sort_order, id`)
+	nodes, err := s.folders(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []FolderChoice
-	for rows.Next() {
-		var item FolderChoice
-		if err := rows.Scan(&item.ID, &item.Name); err != nil {
-			return nil, err
-		}
-		out = append(out, item)
+	byID := make(map[int64]FolderNode, len(nodes))
+	for _, node := range nodes {
+		byID[node.ID] = node
 	}
-	return out, rows.Err()
+	var path func(int64, int) string
+	path = func(id int64, guard int) string {
+		node, ok := byID[id]
+		if !ok || guard > 12 {
+			return ""
+		}
+		if node.ParentID == 0 {
+			return node.Name
+		}
+		parent := path(node.ParentID, guard+1)
+		if parent == "" {
+			return node.Name
+		}
+		return parent + " / " + node.Name
+	}
+	out := make([]FolderChoice, 0, len(nodes))
+	for _, node := range nodes {
+		out = append(out, FolderChoice{ID: node.ID, Name: path(node.ID, 0)})
+	}
+	slices.SortFunc(out, func(a, b FolderChoice) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	return out, nil
 }
 
 // Voided 返回已作废页面, 只给管理层.
@@ -507,7 +527,25 @@ FROM files.files f WHERE f.id = $1`, fileID).Scan(&uploader, &anyLink)
 }
 
 // CreateFolder 新建目录.
-func (s *Service) CreateFolder(ctx context.Context, actor Actor, name string, parent int64) (int64, error) {
+func folderTone(value string) string {
+	switch value {
+	case "copper", "blue", "red", "gold", "plum":
+		return value
+	default:
+		return "ink"
+	}
+}
+
+func folderMark(value string) string {
+	switch value {
+	case "book", "wrench", "flask", "chip", "note":
+		return value
+	default:
+		return "folder"
+	}
+}
+
+func (s *Service) CreateFolder(ctx context.Context, actor Actor, name string, parent int64, tone, mark string) (int64, error) {
 	if !people.Can(actor.user(), people.ActDocsEdit, people.Resource{}) {
 		return 0, ErrForbidden
 	}
@@ -531,7 +569,8 @@ func (s *Service) CreateFolder(ctx context.Context, actor Actor, name string, pa
 		parentArg = parent
 	}
 	if err := tx.QueryRow(ctx, `
-INSERT INTO docs.folders (parent_id, name) VALUES ($1, $2) RETURNING id`, parentArg, name).Scan(&id); err != nil {
+INSERT INTO docs.folders (parent_id, name, tone, mark) VALUES ($1, $2, $3, $4) RETURNING id`,
+		parentArg, name, folderTone(tone), folderMark(mark)).Scan(&id); err != nil {
 		return 0, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -541,7 +580,7 @@ INSERT INTO docs.folders (parent_id, name) VALUES ($1, $2) RETURNING id`, parent
 }
 
 // UpdateFolder 改名或移动目录.
-func (s *Service) UpdateFolder(ctx context.Context, actor Actor, id int64, name string, parent int64) error {
+func (s *Service) UpdateFolder(ctx context.Context, actor Actor, id int64, name string, parent int64, tone, mark string) error {
 	if !people.Can(actor.user(), people.ActDocsEdit, people.Resource{}) {
 		return ErrForbidden
 	}
@@ -566,7 +605,9 @@ func (s *Service) UpdateFolder(ctx context.Context, actor Actor, id int64, name 
 	if parent != 0 {
 		parentArg = parent
 	}
-	tag, err := tx.Exec(ctx, `UPDATE docs.folders SET name = $2, parent_id = $3 WHERE id = $1`, id, name, parentArg)
+	tag, err := tx.Exec(ctx, `
+UPDATE docs.folders SET name = $2, parent_id = $3, tone = $4, mark = $5 WHERE id = $1`,
+		id, name, parentArg, folderTone(tone), folderMark(mark))
 	if err != nil {
 		return err
 	}
@@ -728,7 +769,9 @@ func canSee(actor Actor, page Page) bool {
 }
 
 func (s *Service) folders(ctx context.Context) ([]FolderNode, error) {
-	rows, err := s.pool.Query(ctx, `SELECT id, coalesce(parent_id, 0), name, sort_order FROM docs.folders ORDER BY sort_order, id`)
+	rows, err := s.pool.Query(ctx, `
+SELECT id, coalesce(parent_id, 0), name, sort_order, tone, mark
+FROM docs.folders ORDER BY sort_order, id`)
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +779,7 @@ func (s *Service) folders(ctx context.Context) ([]FolderNode, error) {
 	var out []FolderNode
 	for rows.Next() {
 		var item FolderNode
-		if err := rows.Scan(&item.ID, &item.ParentID, &item.Name, &item.Sort); err != nil {
+		if err := rows.Scan(&item.ID, &item.ParentID, &item.Name, &item.Sort, &item.Tone, &item.Mark); err != nil {
 			return nil, err
 		}
 		out = append(out, item)

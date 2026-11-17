@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -38,7 +39,7 @@ func RegisterDocsWidget(svc *docs.Service) {
 }
 
 type docView struct {
-	Tree       []docs.FolderNode
+	Tree       []folderView
 	Loose      []docs.PageLink
 	Voided     []docs.PageLink
 	Page       docs.Page
@@ -62,12 +63,34 @@ type docHit struct {
 	HTML  template.HTML
 }
 
+type folderView struct {
+	docs.FolderNode
+	Kids    []folderView
+	Choices []docs.FolderChoice
+	CSRF    string
+	Current int64
+}
+
+func folderViews(nodes []docs.FolderNode, csrf string, current int64, choices []docs.FolderChoice) []folderView {
+	out := make([]folderView, 0, len(nodes))
+	for _, node := range nodes {
+		out = append(out, folderView{
+			FolderNode: node,
+			Kids:       folderViews(node.Children, csrf, current, choices),
+			Choices:    choices,
+			CSRF:       csrf,
+			Current:    current,
+		})
+	}
+	return out
+}
+
 func (s *server) docsIndex(w http.ResponseWriter, r *http.Request) {
 	user, actor, ok := s.docUser(w, r)
 	if !ok {
 		return
 	}
-	tree, loose, err := s.docs.Tree(r.Context(), actor)
+	view, err := s.docFrame(r, user, actor, docView{Management: user.Session.User.Role != "member"})
 	if err != nil {
 		s.showDocErr(w, r, err)
 		return
@@ -77,26 +100,23 @@ func (s *server) docsIndex(w http.ResponseWriter, r *http.Request) {
 		s.showDocErr(w, r, err)
 		return
 	}
-	s.render(w, r, http.StatusOK, page{
-		Title: "文档", Body: "docs-body",
-		Doc: docView{Tree: tree, Loose: loose, Voided: voided, Management: user.Session.User.Role != "member"},
-	})
+	view.Voided = voided
+	s.render(w, r, http.StatusOK, page{Title: "文档", Body: "docs-body", Doc: view})
 }
 
 func (s *server) docsNew(w http.ResponseWriter, r *http.Request) {
-	_, actor, ok := s.docUser(w, r)
+	user, actor, ok := s.docUser(w, r)
 	if !ok {
 		return
 	}
-	folders, err := s.docs.Folders(r.Context(), actor)
+	view, err := s.docFrame(r, user, actor, docView{
+		Draft: docs.Draft{Visibility: "all"}, Management: actor.Role != "member",
+	})
 	if err != nil {
 		s.showDocErr(w, r, err)
 		return
 	}
-	s.render(w, r, http.StatusOK, page{
-		Title: "新建文档", Body: "doc-form-body", Editing: false,
-		Doc: docView{Folders: folders, Draft: docs.Draft{Visibility: "all"}, Management: actor.Role != "member"},
-	})
+	s.render(w, r, http.StatusOK, page{Title: "新建文档", Body: "doc-form-body", Doc: view})
 }
 
 func (s *server) docsCreate(w http.ResponseWriter, r *http.Request) {
@@ -104,7 +124,7 @@ func (s *server) docsCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) docsEdit(w http.ResponseWriter, r *http.Request) {
-	_, actor, ok := s.docUser(w, r)
+	user, actor, ok := s.docUser(w, r)
 	if !ok {
 		return
 	}
@@ -117,18 +137,15 @@ func (s *server) docsEdit(w http.ResponseWriter, r *http.Request) {
 		s.showDocErr(w, r, err)
 		return
 	}
-	folders, err := s.docs.Folders(r.Context(), actor)
+	view, err := s.docFrame(r, user, actor, docView{
+		Page: pageRow, Management: actor.Role != "member",
+		Draft: draftFrom(pageRow), Tags: strings.Join(pageRow.Tags, ", "),
+	})
 	if err != nil {
 		s.showDocErr(w, r, err)
 		return
 	}
-	s.render(w, r, http.StatusOK, page{
-		Title: "编辑 " + pageRow.Title, Body: "doc-form-body", Editing: true,
-		Doc: docView{
-			Page: pageRow, Folders: folders, Management: actor.Role != "member",
-			Draft: draftFrom(pageRow), Tags: strings.Join(pageRow.Tags, ", "),
-		},
-	})
+	s.render(w, r, http.StatusOK, page{Title: "编辑 " + pageRow.Title, Body: "doc-form-body", Editing: true, Doc: view})
 }
 
 func (s *server) docsSave(w http.ResponseWriter, r *http.Request) {
@@ -206,7 +223,7 @@ func (s *server) docsView(w http.ResponseWriter, r *http.Request) {
 		s.docsRaw(w, r)
 		return
 	}
-	_, actor, ok := s.docUser(w, r)
+	user, actor, ok := s.docUser(w, r)
 	if !ok {
 		return
 	}
@@ -219,10 +236,12 @@ func (s *server) docsView(w http.ResponseWriter, r *http.Request) {
 		s.showDocErr(w, r, err)
 		return
 	}
-	s.render(w, r, http.StatusOK, page{
-		Title: row.Title, Body: "doc-body",
-		Doc: docView{Page: row, HTML: mdown.Render(row.Body), Management: actor.Role != "member"},
-	})
+	view, err := s.docFrame(r, user, actor, docView{Page: row, Management: actor.Role != "member"})
+	if err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	s.render(w, r, http.StatusOK, page{Title: row.Title, Body: "doc-body", Doc: view})
 }
 
 func (s *server) docsRaw(w http.ResponseWriter, r *http.Request) {
@@ -423,11 +442,11 @@ func (s *server) docsFolderCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parent, _ := strconv.ParseInt(r.FormValue("parent"), 10, 64)
-	if _, err := s.docs.CreateFolder(r.Context(), actor, r.FormValue("name"), parent); err != nil {
+	if _, err := s.docs.CreateFolder(r.Context(), actor, r.FormValue("name"), parent, r.FormValue("tone"), r.FormValue("mark")); err != nil {
 		s.showDocErr(w, r, err)
 		return
 	}
-	http.Redirect(w, r, "/docs", http.StatusSeeOther)
+	http.Redirect(w, r, docsNext(r), http.StatusSeeOther)
 }
 
 func (s *server) docsFolderUpdate(w http.ResponseWriter, r *http.Request) {
@@ -440,11 +459,11 @@ func (s *server) docsFolderUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	parent, _ := strconv.ParseInt(r.FormValue("parent"), 10, 64)
-	if err := s.docs.UpdateFolder(r.Context(), actor, id, r.FormValue("name"), parent); err != nil {
+	if err := s.docs.UpdateFolder(r.Context(), actor, id, r.FormValue("name"), parent, r.FormValue("tone"), r.FormValue("mark")); err != nil {
 		s.showDocErr(w, r, err)
 		return
 	}
-	http.Redirect(w, r, "/docs", http.StatusSeeOther)
+	http.Redirect(w, r, docsNext(r), http.StatusSeeOther)
 }
 
 func (s *server) docsUpload(w http.ResponseWriter, r *http.Request) {
@@ -456,7 +475,7 @@ func (s *server) docsAttach(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) receiveFile(w http.ResponseWriter, r *http.Request, backToEdit bool) {
-	_, actor, ok := s.docUser(w, r)
+	user, actor, ok := s.docUser(w, r)
 	if !ok {
 		return
 	}
@@ -496,17 +515,16 @@ func (s *server) receiveFile(w http.ResponseWriter, r *http.Request, backToEdit 
 		return
 	}
 	row.Body = strings.TrimRight(row.Body, "\n") + "\n" + line + "\n"
-	folders, err := s.docs.Folders(r.Context(), actor)
+	view, err := s.docFrame(r, user, actor, docView{
+		Page: row, Management: actor.Role != "member",
+		Draft: draftFrom(row), Tags: strings.Join(row.Tags, ", "),
+	})
 	if err != nil {
 		s.showDocErr(w, r, err)
 		return
 	}
 	s.render(w, r, http.StatusOK, page{
-		Title: "编辑 " + row.Title, Body: "doc-form-body", Editing: true, Notice: "已插入引用, 记得保存",
-		Doc: docView{
-			Page: row, Folders: folders, Management: actor.Role != "member",
-			Draft: draftFrom(row), Tags: strings.Join(row.Tags, ", "),
-		},
+		Title: "编辑 " + row.Title, Body: "doc-form-body", Editing: true, Notice: "已插入引用, 记得保存", Doc: view,
 	})
 }
 
@@ -594,6 +612,32 @@ func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", meta.Type)
 	w.Header().Set("Content-Disposition", disp+`; filename="`+strings.NewReplacer(`"`, "", "\r", "", "\n", "").Replace(meta.Name)+`"`)
 	http.ServeContent(w, r, meta.Name, meta.Created, file)
+}
+
+func (s *server) docFrame(r *http.Request, user visitor, actor docs.Actor, view docView) (docView, error) {
+	tree, loose, err := s.docs.Tree(r.Context(), actor)
+	if err != nil {
+		return view, err
+	}
+	folders, err := s.docs.Folders(r.Context(), actor)
+	if err != nil {
+		return view, err
+	}
+	view.Tree = folderViews(tree, user.Session.CSRF, view.Page.ID, folders)
+	view.Loose = loose
+	view.Folders = folders
+	return view, nil
+}
+
+func docsNext(r *http.Request) string {
+	parsed, err := url.Parse(r.Referer())
+	if err != nil || parsed.Path == "" || !strings.HasPrefix(parsed.Path, "/docs") {
+		return "/docs"
+	}
+	if parsed.Host != "" && !strings.EqualFold(parsed.Host, r.Host) {
+		return "/docs"
+	}
+	return parsed.Path
 }
 
 func (s *server) docUser(w http.ResponseWriter, r *http.Request) (visitor, docs.Actor, bool) {

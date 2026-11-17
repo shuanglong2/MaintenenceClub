@@ -58,7 +58,7 @@ func TestDocsFlow(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := New(pool, store)
-	folderID, err := svc.CreateFolder(ctx, leaderActor, "仪器", 0)
+	folderID, err := svc.CreateFolder(ctx, leaderActor, "仪器", 0, "blue", "flask")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,19 +1,10 @@
 {{define "docs-body"}}
+<div class="docs-app">
+{{template "doc-side" .}}
+<div class="doc-main">
 <h1>文档</h1>
-<p class="tools"><a class="go" href="/docs/new">新建</a><a href="/docs/search">搜索</a><a href="/docs/export">导出</a></p>
+<p class="hint">左边选择一篇阅览. 编辑时右侧会编译 Markdown, 公式用 $ 或 $$ .</p>
 {{if and (not .Doc.Tree) (not .Doc.Loose)}}<p class="empty">还没有文档.</p>{{end}}
-<ul class="tree">
-{{range .Doc.Loose}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
-{{range .Doc.Tree}}{{template "doc-folder" .}}{{end}}
-</ul>
-<details>
-<summary>新建目录</summary>
-<form class="stack" method="post" action="/docs/folders">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>名称<input name="name" required></label>
-<button type="submit">创建目录</button>
-</form>
-</details>
 {{if .Doc.Voided}}
 <h2>已作废</h2>
 <ul>
@@ -21,13 +12,111 @@
 <form method="post" action="/docs/p/{{.ID}}/unvoid"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit">恢复</button></form></li>{{end}}
 </ul>
 {{end}}
+</div>
+</div>
+{{end}}
+
+{{define "doc-side"}}
+<aside class="doc-side">
+<p class="tools"><a class="go" href="/docs/new">新建</a><a href="/docs/search">搜索</a><a href="/docs/export">导出</a></p>
+<ul class="doc-tree">
+{{range .Doc.Loose}}<li><a class="page" href="/docs/p/{{.ID}}" {{if eq .ID $.Doc.Page.ID}}aria-current="page"{{end}}>{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
+{{range .Doc.Tree}}{{template "doc-folder" .}}{{end}}
+</ul>
+<details>
+<summary>新建目录</summary>
+<form class="stack" method="post" action="/docs/folders">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>名称<input name="name" required></label>
+<label>上级
+<select name="parent">
+<option value="0">顶层</option>
+{{range .Doc.Folders}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+</select>
+</label>
+<fieldset class="tones">
+<legend>颜色</legend>
+<label class="tone-ink"><input type="radio" name="tone" value="ink" checked>墨</label>
+<label class="tone-copper"><input type="radio" name="tone" value="copper">铜</label>
+<label class="tone-blue"><input type="radio" name="tone" value="blue">蓝</label>
+<label class="tone-red"><input type="radio" name="tone" value="red">红</label>
+<label class="tone-gold"><input type="radio" name="tone" value="gold">金</label>
+<label class="tone-plum"><input type="radio" name="tone" value="plum">紫</label>
+</fieldset>
+<label>图示
+<select name="mark">
+<option value="folder" selected>文件夹</option>
+<option value="book">手册</option>
+<option value="wrench">维修</option>
+<option value="flask">实验</option>
+<option value="chip">器材</option>
+<option value="note">笔记</option>
+</select>
+</label>
+<button type="submit">创建目录</button>
+</form>
+</details>
+</aside>
 {{end}}
 
 {{define "doc-folder"}}
-<li>{{.Name}}
+<li class="tone-{{.Tone}}">
+<div class="folder-head">
+{{template "doc-mark" .}}
+<span>{{.Name}}</span>
+<details>
+<summary>标记</summary>
+<form class="stack" method="post" action="/docs/folders/{{.ID}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>名称<input name="name" value="{{.Name}}" required></label>
+<label>上级
+<select name="parent">
+<option value="0">顶层</option>
+{{range .Choices}}{{if ne .ID $.ID}}<option value="{{.ID}}" {{if eq .ID $.ParentID}}selected{{end}}>{{.Name}}</option>{{end}}{{end}}
+</select>
+</label>
+{{template "doc-mark-fields" .}}
+<button type="submit">保存</button>
+</form>
+</details>
+</div>
 <ul>
-{{range .Pages}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
-{{range .Children}}{{template "doc-folder" .}}{{end}}
+{{range .Pages}}<li><a class="page" href="/docs/p/{{.ID}}" {{if eq .ID $.Current}}aria-current="page"{{end}}>{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
+{{range .Kids}}{{template "doc-folder" .}}{{end}}
 </ul>
 </li>
+{{end}}
+
+{{define "doc-mark"}}
+<svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+{{if eq .Mark "book"}}<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 0-3 3z"/>
+{{else if eq .Mark "wrench"}}<path d="M14 6a4 4 0 0 0-5 5L4 16l2 2 5-5a4 4 0 0 0 5-5l-2 2-2-2z"/>
+{{else if eq .Mark "flask"}}<path d="M9 3h6M10 3v6L6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l-4-10V3"/>
+{{else if eq .Mark "chip"}}<path d="M8 8h8v8H8zM12 4v4M12 16v4M4 12h4M16 12h4"/>
+{{else if eq .Mark "note"}}<path d="M7 3h8l4 4v14H7zM15 3v4h4"/>
+{{else}}<path d="M3 7h6l2 2h10v10H3z"/>
+{{end}}
+</svg>
+{{end}}
+
+{{define "doc-mark-fields"}}
+<fieldset class="tones">
+<legend>颜色</legend>
+<label class="tone-ink"><input type="radio" name="tone" value="ink" {{if or (eq .Tone "") (eq .Tone "ink")}}checked{{end}}>墨</label>
+<label class="tone-copper"><input type="radio" name="tone" value="copper" {{if eq .Tone "copper"}}checked{{end}}>铜</label>
+<label class="tone-blue"><input type="radio" name="tone" value="blue" {{if eq .Tone "blue"}}checked{{end}}>蓝</label>
+<label class="tone-red"><input type="radio" name="tone" value="red" {{if eq .Tone "red"}}checked{{end}}>红</label>
+<label class="tone-gold"><input type="radio" name="tone" value="gold" {{if eq .Tone "gold"}}checked{{end}}>金</label>
+<label class="tone-plum"><input type="radio" name="tone" value="plum" {{if eq .Tone "plum"}}checked{{end}}>紫</label>
+</fieldset>
+<label>图示
+<select name="mark">
+<option value="folder" {{if or (eq .Mark "") (eq .Mark "folder")}}selected{{end}}>文件夹</option>
+<option value="book" {{if eq .Mark "book"}}selected{{end}}>手册</option>
+<option value="wrench" {{if eq .Mark "wrench"}}selected{{end}}>维修</option>
+<option value="flask" {{if eq .Mark "flask"}}selected{{end}}>实验</option>
+<option value="chip" {{if eq .Mark "chip"}}selected{{end}}>器材</option>
+<option value="note" {{if eq .Mark "note"}}selected{{end}}>笔记</option>
+</select>
+</label>
 {{end}}

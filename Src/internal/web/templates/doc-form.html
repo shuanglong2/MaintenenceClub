@@ -1,9 +1,12 @@
 {{define "doc-form-body"}}
+<link rel="stylesheet" href="{{static "vditor/dist/index.css"}}">
+<div class="docs-app">
+{{template "doc-side" .}}
+<div class="doc-main">
 <h1>{{.Title}}</h1>
 {{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
 {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-<div class="editor">
-<div>
+<p class="hint">分屏里右边是编译结果. 行内公式 $F=ma$, 独立公式用 $$ . 物理式可用 \dv{v}{t}, \pdv{f}{x}, \vb{F}, \curl{\vb{B}}.</p>
 <form class="stack" method="post" action="{{if .Editing}}/docs/p/{{.Doc.Page.ID}}{{else}}/docs{{end}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <input type="hidden" name="version" value="{{.Doc.Draft.Version}}">
@@ -25,24 +28,13 @@
 <input type="hidden" name="visibility" value="{{if .Doc.Draft.Visibility}}{{.Doc.Draft.Visibility}}{{else}}all{{end}}">
 {{end}}
 <label>标签<input name="tags" value="{{.Doc.Tags}}" placeholder="用逗号分隔"></label>
-<label>正文
-<textarea class="doc-body" id="doc-body" name="body" rows="16"
- hx-post="/md/preview" hx-trigger="keyup changed delay:400ms" hx-target="#preview" hx-include="closest form">{{.Doc.Draft.Body}}</textarea>
-</label>
+<textarea class="markdown-source" id="doc-body" name="body">{{.Doc.Draft.Body}}</textarea>
+<div id="doc-editor"></div>
 <button type="submit">保存</button>
 </form>
-{{if .Editing}}
-<form class="stack" method="post" action="/docs/p/{{.Doc.Page.ID}}/attach" enctype="multipart/form-data">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>上传图片或附件<input type="file" name="file" required></label>
-<button type="submit">上传并插入</button>
-</form>
-{{end}}
-</div>
-<div>
-<h2>预览</h2>
-<div id="preview" class="prose"></div>
+{{if .Editing}}<p class="tools"><a href="/docs/p/{{.Doc.Page.ID}}">阅览</a></p>{{end}}
 </div>
 </div>
+<script src="{{static "vditor/dist/index.min.js"}}"></script>
 <script src="{{static "docs.js"}}"></script>
 {{end}}

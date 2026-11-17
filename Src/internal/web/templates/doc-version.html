@@ -1,8 +1,12 @@
 {{define "doc-version-body"}}
+<link rel="stylesheet" href="{{static "vditor/dist/index.css"}}">
 <h1>版本 {{.Doc.Version.Version}}</h1>
 <p>{{.Doc.Version.Editor}} {{time8 .Doc.Version.Saved}}</p>
 <p class="tools"><a href="/docs/p/{{.Doc.Page.ID}}/history">全部历史</a></p>
-<article class="prose">{{.Doc.HTML}}</article>
+<textarea class="markdown-source" id="doc-source">{{.Doc.Version.Body}}</textarea>
+<div id="doc-preview" class="prose"></div>
+<script src="{{static "vditor/dist/method.min.js"}}"></script>
+<script src="{{static "docs.js"}}"></script>
 <form method="post" action="/docs/p/{{.Doc.Page.ID}}/history/{{.Doc.Version.Version}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <button type="submit">还原为这一版</button>
