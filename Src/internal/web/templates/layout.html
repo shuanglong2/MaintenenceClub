@@ -12,7 +12,7 @@
 {{if .User}}
 {{if not .User.MustChange}}
 <nav>
-<a href="/search" {{if navOn .Path "/search"}}aria-current="page"{{end}}>搜索</a>
+<a href="/" {{if navOn .Path "/"}}aria-current="page"{{end}}>主页</a>
 <a href="/docs" {{if navOn .Path "/docs"}}aria-current="page"{{end}}>文档</a>
 <a href="/inventory" {{if navOn .Path "/inventory"}}aria-current="page"{{end}}>库存</a>
 <a href="/events" {{if navOn .Path "/events"}}aria-current="page"{{end}}>活动</a>

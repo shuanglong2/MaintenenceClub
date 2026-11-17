@@ -11,6 +11,51 @@ import (
 
 const homeLimit = 5
 
+// HomeOngoingHTML 是此刻正在进行的活动: 状态仍是计划中, 而且现在落在起止时间里.
+func (s *Service) HomeOngoingHTML(ctx context.Context, actor Actor) (template.HTML, error) {
+	if !join(actor) {
+		return "", ErrForbidden
+	}
+	now := time.Now()
+	rows, err := s.pool.Query(ctx, `
+SELECT id, title, starts_at, ends_at, all_day
+FROM events.events
+WHERE status = 'planned' AND starts_at <= $1 AND ends_at > $1
+ORDER BY starts_at, id
+LIMIT $2`, now, homeLimit)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var b strings.Builder
+	n := 0
+	for rows.Next() {
+		var event Event
+		if err := rows.Scan(&event.ID, &event.Title, &event.Starts, &event.Ends, &event.AllDay); err != nil {
+			return "", err
+		}
+		if n == 0 {
+			b.WriteString("<ul>")
+		}
+		n++
+		b.WriteString(`<li><a href="/events/`)
+		b.WriteString(strconv.FormatInt(event.ID, 10))
+		b.WriteString(`">`)
+		b.WriteString(html.EscapeString(event.Title))
+		b.WriteString("</a> ")
+		b.WriteString(html.EscapeString(WhenLabel(event)))
+		b.WriteString("</li>")
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if n == 0 {
+		return `<p class="empty">现在没有进行中的活动.</p>`, nil
+	}
+	b.WriteString("</ul>")
+	return template.HTML(b.String()), nil
+}
+
 // HomeUpcomingHTML 是 14 天内尚未结束的活动, 最多 5 条, 只查一次.
 func (s *Service) HomeUpcomingHTML(ctx context.Context, actor Actor) (template.HTML, error) {
 	if !join(actor) {

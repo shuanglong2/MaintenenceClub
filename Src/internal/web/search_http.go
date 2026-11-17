@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
@@ -29,30 +28,6 @@ type findGroup struct {
 type findHit struct {
 	Href  string
 	Label string
-}
-
-func (s *server) search(w http.ResponseWriter, r *http.Request) {
-	user, ok := s.requireUser(w, r)
-	if !ok {
-		return
-	}
-	query := strings.TrimSpace(r.URL.Query().Get("q"))
-	if utf8.RuneCountInString(query) > 40 {
-		s.render(w, r, http.StatusBadRequest, page{
-			Title: "搜索", Body: "error-body", Status: http.StatusBadRequest, Message: "搜索词太长",
-		})
-		return
-	}
-	view := findView{Query: query}
-	if query != "" {
-		groups, err := s.findGroups(r, user, query)
-		if err != nil {
-			s.internal(w, r, err)
-			return
-		}
-		view.Groups = groups
-	}
-	s.render(w, r, http.StatusOK, page{Title: "搜索", Body: "search-body", Find: view})
 }
 
 func (s *server) findGroups(r *http.Request, user visitor, query string) ([]findGroup, error) {

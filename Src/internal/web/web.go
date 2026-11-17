@@ -109,6 +109,7 @@ type page struct {
 	Sys        systemView
 	Find       findView
 	Path       string
+	Home       homeView
 }
 
 type userView struct {
@@ -192,6 +193,8 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 
 func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /{$}", s.home)
+	mux.HandleFunc("POST /notices", s.noticeCreate)
+	mux.HandleFunc("POST /notices/{id}/void", s.noticeVoid)
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.HandleFunc("GET /static/{path...}", s.staticFile)
 	mux.HandleFunc("GET /search", s.search)
@@ -303,11 +306,11 @@ func (s *server) routes(mux *http.ServeMux) {
 }
 
 func (s *server) home(w http.ResponseWriter, r *http.Request) {
-	data := page{Title: "维修组", Body: "home-body"}
-	if user, ok := visitorFrom(r); ok {
-		data.Widgets = renderWidgets(r.Context(), user.Session.User)
+	if _, ok := visitorFrom(r); !ok {
+		s.render(w, r, http.StatusOK, page{Title: "维修组", Body: "home-body"})
+		return
 	}
-	s.render(w, r, http.StatusOK, data)
+	s.front(w, r)
 }
 
 func (s *server) notFound(w http.ResponseWriter, r *http.Request) {

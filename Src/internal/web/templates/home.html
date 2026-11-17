@@ -1,11 +1,61 @@
 {{define "home-body"}}
 {{if .User}}
 <header class="page-head">
-<h1>今天</h1>
-<p class="lead">你好, {{.User.Name}}. 下面是现在要处理的事.</p>
+<h1>主页</h1>
+<p class="lead">你好, {{.User.Name}}.</p>
 </header>
-{{if .Widgets}}<div class="widgets">{{range .Widgets}}<section class="widget"><h2>{{.Title}}</h2>{{.HTML}}</section>{{end}}</div>
-{{else}}<p class="empty">暂无汇总.</p>{{end}}
+<form class="search-bar" method="get" action="/">
+<label>搜索<input name="q" value="{{.Find.Query}}" maxlength="40" placeholder="文档, 物品, 活动, 任务"></label>
+<button type="submit">搜索</button>
+</form>
+{{if .Find.Query}}
+{{range .Find.Groups}}
+<section class="widget">
+<h2>{{.Title}}</h2>
+{{if .Hits}}
+<ul>
+{{range .Hits}}<li><a class="search-hit" href="{{.Href}}">{{.Label}}</a></li>{{end}}
+</ul>
+{{else}}
+<p class="empty">没有结果.</p>
+{{end}}
+</section>
+{{end}}
+{{end}}
+<section class="widget">
+<h2>公告</h2>
+{{if .Home.Notices}}
+<ul>
+{{range .Home.Notices}}
+<li>
+<p>{{.Body}}</p>
+<p class="meta">{{.Author}} · {{time8 .At}}</p>
+{{if $.Home.CanPost}}
+<form method="post" action="/notices/{{.ID}}/void">
+<input type="hidden" name="csrf" value="{{$.CSRF}}">
+<button type="submit">撤回</button>
+</form>
+{{end}}
+</li>
+{{end}}
+</ul>
+{{else}}<p class="empty">还没有公告.</p>{{end}}
+{{if .Home.CanPost}}
+<form class="stack" method="post" action="/notices">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>新公告<textarea name="body" rows="3" maxlength="400" required></textarea></label>
+<button type="submit">发布</button>
+</form>
+{{end}}
+</section>
+<section class="widget">
+<h2>进行中的活动</h2>
+{{if .Home.Events}}{{.Home.Events}}{{else}}<p class="empty">现在没有进行中的活动.</p>{{end}}
+</section>
+<section class="widget">
+<h2>未完成的任务</h2>
+{{if .Home.Tasks}}{{.Home.Tasks}}{{else}}<p class="empty">没有未完成的任务.</p>{{end}}
+</section>
 {{else}}
 <header class="page-head">
 <h1>维修组</h1>

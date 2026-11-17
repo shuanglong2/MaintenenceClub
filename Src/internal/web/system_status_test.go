@@ -26,6 +26,16 @@ func TestCapacityThresholds(t *testing.T) {
 	}
 }
 
+func TestCPUPercent(t *testing.T) {
+	pct, ok := cpuPercent([]uint64{0, 0, 0, 10, 0}, []uint64{5, 0, 0, 15, 0})
+	if !ok || pct != 50 {
+		t.Fatalf("%d %v", pct, ok)
+	}
+	if _, ok := cpuPercent([]uint64{1}, []uint64{2}); ok {
+		t.Fatal("字段不够却算出了占用")
+	}
+}
+
 func TestFormatBytes(t *testing.T) {
 	if formatBytes(0) != "0 B" || formatBytes(1536) != "1.5 KB" || formatBytes(6<<30) != "6.0 GB" {
 		t.Fatalf("%s %s %s", formatBytes(0), formatBytes(1536), formatBytes(6<<30))

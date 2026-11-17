@@ -20,6 +20,61 @@ type homeItem struct {
 	Due    time.Time
 }
 
+// HomeBoardHTML 是全组未完成的任务, 最多 8 条. 完成和取消的不出现.
+func (s *Service) HomeBoardHTML(ctx context.Context, actor Actor) (template.HTML, error) {
+	if !canUse(actor) {
+		return "", ErrForbidden
+	}
+	rows, err := s.pool.Query(ctx, `
+SELECT t.id, t.title, t.status, t.due_on, t.owner_name
+FROM tasks.tasks t
+WHERE t.status IN ('todo', 'doing')
+ORDER BY t.due_on NULLS LAST, t.id
+LIMIT 8`)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var b strings.Builder
+	n := 0
+	for rows.Next() {
+		var item homeItem
+		var due *time.Time
+		var owner string
+		if err := rows.Scan(&item.ID, &item.Title, &item.Status, &due, &owner); err != nil {
+			return "", err
+		}
+		if due != nil {
+			item.Due = *due
+		}
+		if n == 0 {
+			b.WriteString("<ul>")
+		}
+		n++
+		b.WriteString(`<li><a href="/tasks/`)
+		b.WriteString(strconv.FormatInt(item.ID, 10))
+		b.WriteString(`">`)
+		b.WriteString(html.EscapeString(item.Title))
+		b.WriteString("</a> ")
+		b.WriteString(html.EscapeString(StatusLabel(item.Status)))
+		b.WriteString(" · ")
+		b.WriteString(html.EscapeString(owner))
+		if !item.Due.IsZero() {
+			b.WriteString(" · ")
+			b.WriteString(item.Due.Format("2006-01-02"))
+		}
+		b.WriteString("</li>")
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if n == 0 {
+		return `<p class="empty">没有未完成的任务.</p>`, nil
+	}
+	b.WriteString("</ul>")
+	return template.HTML(b.String()), nil
+}
+
 // HomeOpenHTML 是当前用户未完成的任务, 最多 5 条, 只查一次.
 func (s *Service) HomeOpenHTML(ctx context.Context, actor Actor) (template.HTML, error) {
 	if !canUse(actor) {

@@ -27,11 +27,24 @@ type systemView struct {
 	UploadMax  string
 	UploadHigh bool
 	DBSize     string
+	DBConn     string
 	BackupAt   string
 	BackupOK   bool
 	BackupText string
 	Memory     string
+	CPU        string
+	Mem        string
+	DiskUsed   string
+	NetRate    string
+	NetTotal   string
 	Warn       string
+}
+
+type hostView struct {
+	CPU      string
+	Mem      string
+	NetRate  string
+	NetTotal string
 }
 
 type backupStatus struct {
@@ -58,11 +71,10 @@ func (s *server) systemStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) collectStatus(ctx context.Context) systemView {
+	host := sampleHost()
 	view := systemView{
-		Version: buildinfo.Version,
-		Commit:  buildinfo.Commit,
-		Built:   buildinfo.Built,
-		Memory:  processMemory(),
+		Version: buildinfo.Version, Commit: buildinfo.Commit, Built: buildinfo.Built,
+		Memory: processMemory(), CPU: host.CPU, Mem: host.Mem, NetRate: host.NetRate, NetTotal: host.NetTotal,
 	}
 	root := "/srv/maintclub"
 	if store := s.uploads(); store != nil && store.Root() != "" {
@@ -86,8 +98,16 @@ func (s *server) collectStatus(ctx context.Context) systemView {
 		view.DiskFree = formatBytes(free)
 		view.DiskTotal = formatBytes(total)
 		view.DiskLow = diskLow(free, total)
+		if total >= free {
+			view.DiskUsed = formatBytes(total - free)
+		} else {
+			view.DiskUsed = "未知"
+		}
 	}
-	view.DBSize = s.databaseSize(ctx)
+	if view.DiskUsed == "" {
+		view.DiskUsed = "未知"
+	}
+	view.DBSize, view.DBConn = s.databaseFacts(ctx)
 	backup := readBackupStatus(backupStatusPath)
 	view.BackupOK = backup.OK
 	view.BackupText = backup.Text
@@ -109,18 +129,48 @@ func (s *server) collectStatus(ctx context.Context) systemView {
 	return view
 }
 
-func (s *server) databaseSize(ctx context.Context) string {
+func (s *server) databaseFacts(ctx context.Context) (string, string) {
 	q, ok := s.db.(interface {
 		QueryRow(context.Context, string, ...any) pgx.Row
 	})
 	if !ok {
-		return "未知"
+		return "未知", ""
 	}
-	var size int64
-	if err := q.QueryRow(ctx, `SELECT pg_database_size(current_database())`).Scan(&size); err != nil || size < 0 {
-		return "未知"
+	var size, conns int64
+	err := q.QueryRow(ctx, `
+SELECT pg_database_size(current_database()), numbackends
+FROM pg_stat_database
+WHERE datname = current_database()`).Scan(&size, &conns)
+	if err != nil || size < 0 {
+		return "未知", ""
 	}
-	return formatBytes(uint64(size))
+	return formatBytes(uint64(size)), fmt.Sprintf("%d 个连接", conns)
+}
+
+func cpuPercent(prev, next []uint64) (int, bool) {
+	if len(prev) < 4 || len(prev) != len(next) {
+		return 0, false
+	}
+	var prevTotal, nextTotal, prevIdle, nextIdle uint64
+	for i := range prev {
+		prevTotal += prev[i]
+		nextTotal += next[i]
+	}
+	prevIdle = prev[3]
+	nextIdle = next[3]
+	if len(prev) > 4 {
+		prevIdle += prev[4]
+		nextIdle += next[4]
+	}
+	if nextTotal <= prevTotal || nextIdle < prevIdle {
+		return 0, false
+	}
+	total := nextTotal - prevTotal
+	idle := nextIdle - prevIdle
+	if idle > total {
+		return 0, true
+	}
+	return int((total - idle) * 100 / total), true
 }
 
 func dirSize(root string) uint64 {
