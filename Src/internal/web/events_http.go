@@ -11,9 +11,9 @@ import (
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/boards"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
-	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
 )
 
 // RegisterEventWidget 把近期活动登记到首页.

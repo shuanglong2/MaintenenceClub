@@ -12,21 +12,21 @@ import (
 )
 
 type gatherView struct {
-	Board     string
-	Base      string
-	Items     []boards.Item
-	Open      boards.Item
-	HasOpen   bool
-	Creating  bool
-	Kinds     []string
-	Statuses  []string
-	People    []boards.Person
-	Kind      string
-	Status    string
-	Query     string
-	ShowDone  bool
-	Leader    bool
-	Joined    bool
+	Board    string
+	Base     string
+	Items    []boards.Item
+	Open     boards.Item
+	HasOpen  bool
+	Creating bool
+	Kinds    []string
+	Statuses []string
+	People   []boards.Person
+	Kind     string
+	Status   string
+	Query    string
+	ShowDone bool
+	Leader   bool
+	Joined   bool
 }
 
 func (s *server) gatherList(w http.ResponseWriter, r *http.Request) {
