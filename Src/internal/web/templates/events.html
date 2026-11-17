@@ -1,11 +1,11 @@
 {{define "events-body"}}
 <h1>{{.Evt.MonthLabel}}</h1>
-<p class="tools"><a href="/events?month={{.Evt.Prev}}">上个月</a> <a href="/events?month={{.Evt.Next}}">下个月</a> <a href="/events/list">列表</a> {{if .Evt.Manage}}<a class="go" href="/events/new">新建</a>{{end}}</p>
+<p class="tools"><a href="/events?month={{.Evt.Prev}}">上个月</a> <a href="/events?month={{.Evt.Next}}">下个月</a> <a href="/events/list">列表</a> {{if .Evt.Manage}}<a class="go" href="/events/new">添加日程</a>{{end}}</p>
 <div class="cal">
 {{range .Evt.Heads}}<div class="cal-head">{{.}}</div>{{end}}
-{{range .Evt.Days}}<div class="cal-day{{if not .InMonth}} muted{{end}}"><div class="cal-date">{{.Day}}</div>{{range .Items}}<a href="/events/{{.ID}}">{{.Title}}</a>{{end}}</div>{{end}}
+{{range .Evt.Days}}<div class="cal-day{{if not .InMonth}} muted{{end}}"><div class="cal-date">{{.Day}}</div>{{range .Items}}<a data-kind="{{.Kind}}" href="{{.URL}}">{{.Kind}} · {{.Title}}</a>{{end}}</div>{{end}}
 </div>
 <div class="day-list">
-{{range .Evt.Days}}{{if and .InMonth .Items}}<h2>{{.Label}}</h2><ul>{{range .Items}}<li><a href="/events/{{.ID}}">{{.Title}}</a> {{whenLabel .}}</li>{{end}}</ul>{{end}}{{end}}
+{{range .Evt.Days}}{{if and .InMonth .Items}}<h2>{{.Label}}</h2><ul>{{range .Items}}<li><a href="{{.URL}}">{{.Kind}} · {{.Title}}</a> {{whenLabel .}}</li>{{end}}</ul>{{end}}{{end}}
 </div>
 {{end}}

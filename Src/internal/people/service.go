@@ -43,6 +43,7 @@ type Input struct {
 	Role      string
 	Finance   bool
 	StudentID string
+	ClassName string
 	Contact   string
 	Note      string
 	Password  string
@@ -71,6 +72,8 @@ type Person struct {
 	Role       string
 	Finance    bool
 	StudentID  string
+	ClassName  string
+	AvatarID   int64
 	Contact    string
 	Joined     time.Time
 	Status     string
@@ -88,6 +91,8 @@ type PersonView struct {
 	Finance       bool
 	ShowFinance   bool
 	StudentID     string
+	ClassName     string
+	AvatarID      int64
 	Contact       string
 	Joined        time.Time
 	Status        string
@@ -220,8 +225,8 @@ func (s *Service) Update(ctx context.Context, actor Actor, id int64, in Input) e
 	}
 	_, err = tx.Exec(ctx, `
 UPDATE people.people
-SET name = $2, role = $3, finance = $4, student_id = $5, contact = $6, note = $7
-WHERE id = $1`, id, in.Name, in.Role, in.Finance, in.StudentID, in.Contact, in.Note)
+SET name = $2, role = $3, finance = $4, student_id = $5, class_name = $6, contact = $7, note = $8
+WHERE id = $1`, id, in.Name, in.Role, in.Finance, in.StudentID, strings.TrimSpace(in.ClassName), in.Contact, in.Note)
 	if err != nil {
 		return err
 	}
@@ -592,9 +597,9 @@ func (s *Service) insert(ctx context.Context, tx pgx.Tx, in Input) (Person, erro
 	err = tx.QueryRow(ctx, `
 INSERT INTO people.people (name, login_name, password_hash, role, finance, student_id, contact, note, status)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active')
-RETURNING id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password`,
+RETURNING id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password, class_name, coalesce(avatar_id, 0)`,
 		in.Name, login, hash, role, in.Finance, strings.TrimSpace(in.StudentID), strings.TrimSpace(in.Contact), strings.TrimSpace(in.Note),
-	).Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange)
+	).Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange, &person.ClassName, &person.AvatarID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -655,7 +660,7 @@ func (s *Service) loadByLogin(ctx context.Context, login string) (Person, error)
 }
 
 const personSelect = `
-SELECT id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password
+SELECT id, name, login_name, password_hash, role, finance, student_id, contact, joined_at, status, note, must_change_password, class_name, coalesce(avatar_id, 0)
 FROM people.people`
 
 type scanner interface {
@@ -664,7 +669,7 @@ type scanner interface {
 
 func scanPerson(row scanner) (Person, error) {
 	var person Person
-	err := row.Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange)
+	err := row.Scan(&person.ID, &person.Name, &person.Login, &person.Hash, &person.Role, &person.Finance, &person.StudentID, &person.Contact, &person.Joined, &person.Status, &person.Note, &person.MustChange, &person.ClassName, &person.AvatarID)
 	return person, err
 }
 
@@ -691,6 +696,12 @@ func Visible(viewer User, person Person) PersonView {
 		view.Login = person.Login
 		view.Contact = person.Contact
 		view.StudentID = person.StudentID
+		view.ClassName = person.ClassName
+		view.AvatarID = person.AvatarID
+	}
+	if view.ShowSensitive {
+		view.ClassName = person.ClassName
+		view.AvatarID = person.AvatarID
 	}
 	if !view.ShowSensitive && viewer.ID != person.ID {
 		view.Note = ""
@@ -698,11 +709,61 @@ func Visible(viewer User, person Person) PersonView {
 	return view
 }
 
+// UpdateSelf 修改自己的姓名, 学号和班级. 学号同时作为登录名.
+func (s *Service) UpdateSelf(ctx context.Context, actor Actor, in Input) error {
+	if actor.ID == 0 || !actor.Active {
+		return ErrForbidden
+	}
+	in.Name = strings.TrimSpace(in.Name)
+	in.ClassName = strings.TrimSpace(in.ClassName)
+	in.StudentID = strings.TrimSpace(in.StudentID)
+	if in.Name == "" {
+		in.Name = in.StudentID
+	}
+	login, err := normalizeLogin(in.StudentID)
+	if err != nil {
+		return err
+	}
+	if err := validateText(in); err != nil {
+		return err
+	}
+	tag, err := s.pool.Exec(ctx, `
+UPDATE people.people
+SET name = $2, login_name = $3, student_id = $3, class_name = $4
+WHERE id = $1`, actor.ID, in.Name, login, in.ClassName)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return ErrLoginTaken
+		}
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetAvatar 记下头像文件.
+func (s *Service) SetAvatar(ctx context.Context, actor Actor, fileID int64) error {
+	if actor.ID == 0 || !actor.Active || fileID < 1 {
+		return ErrForbidden
+	}
+	tag, err := s.pool.Exec(ctx, `UPDATE people.people SET avatar_id = $2 WHERE id = $1`, actor.ID, fileID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func validateText(in Input) error {
 	if utf8.RuneCountInString(in.Name) < 1 || utf8.RuneCountInString(in.Name) > 40 {
 		return ErrBadInput
 	}
-	if utf8.RuneCountInString(in.StudentID) > 32 || utf8.RuneCountInString(in.Contact) > 80 || utf8.RuneCountInString(in.Note) > 500 {
+	if utf8.RuneCountInString(in.StudentID) > 32 || utf8.RuneCountInString(in.ClassName) > 40 || utf8.RuneCountInString(in.Contact) > 80 || utf8.RuneCountInString(in.Note) > 500 {
 		return ErrBadInput
 	}
 	return nil

@@ -54,16 +54,14 @@ func Can(user User, action string, resource Resource) bool {
 	switch action {
 	case ActPeopleManage, ActSystemManage:
 		return user.Role == RoleLeader
-	case ActPeopleList, ActPeopleSelf, ActTaskCreate, ActEventJoin, ActInventoryUse, ActDocsEdit:
+	case ActPeopleSelf, ActTaskCreate, ActEventJoin, ActInventoryUse, ActDocsEdit:
 		return true
+	case ActPeopleList, ActFinanceRead, ActFinanceWrite:
+		return user.Role == RoleLeader
 	case ActPeopleSensitive:
 		return management(user) || self
 	case ActAuditRead, ActTaskEditAll, ActEventEdit, ActLogEditAll, ActInventoryManage, ActDocsVisibility:
 		return management(user)
-	case ActFinanceRead:
-		return management(user) || user.Finance
-	case ActFinanceWrite:
-		return user.Finance
 	case ActTaskEditOwn, ActLogEditOwn:
 		return management(user) || self
 	default:

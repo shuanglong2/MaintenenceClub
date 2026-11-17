@@ -63,6 +63,12 @@ type Item struct {
 	State      string
 	Voided     bool
 	VoidReason string
+	Purpose    string
+	Model      string
+	Value      string
+	Condition  string
+	Received   time.Time
+	LastUsed   time.Time
 }
 
 // Movement 是一条不可修改的数量流水.
@@ -98,6 +104,11 @@ type Draft struct {
 	PhotoID    int64
 	Note       string
 	Qty        int
+	Purpose    string
+	Model      string
+	Value      string
+	Condition  string
+	Received   *time.Time
 }
 
 // MoveInput 是一次入库, 领用, 调整或报废.
@@ -316,8 +327,9 @@ func (s *Service) Update(ctx context.Context, actor Actor, id int64, draft Draft
 	tag, err := tx.Exec(ctx, `
 UPDATE inventory.items
 SET code = $2, name = $3, category = $4, spec = $5, unit = $6, location_id = $7,
-    min_qty = $8, photo_id = $9, note = $10, updated_at = now()
-WHERE id = $1`, id, draft.Code, draft.Name, draft.Category, draft.Spec, draft.Unit, nullID(draft.LocationID), draft.MinQty, nullID(draft.PhotoID), draft.Note)
+    min_qty = $8, photo_id = $9, note = $10, purpose = $11, model = $12, value_text = $13,
+    condition = $14, received_at = COALESCE($15, received_at), updated_at = now()
+WHERE id = $1`, id, draft.Code, draft.Name, draft.Category, draft.Spec, draft.Unit, nullID(draft.LocationID), draft.MinQty, nullID(draft.PhotoID), draft.Note, draft.Purpose, draft.Model, draft.Value, draft.Condition, draft.Received)
 	if err != nil {
 		return Item{}, mapUnique(err)
 	}
@@ -641,13 +653,15 @@ const itemSelect = `
 SELECT i.id, i.code, i.name, i.category, i.spec, i.unit, coalesce(i.location_id, 0), i.min_qty, i.tracked,
        coalesce(i.photo_id, 0), i.note, i.voided_at IS NOT NULL, i.void_reason,
        coalesce((SELECT sum(m.qty) FROM inventory.movements m WHERE m.item_id = i.id), 0),
-       coalesce((SELECT e.kind FROM inventory.equipment_events e WHERE e.item_id = i.id ORDER BY e.id DESC LIMIT 1), '')
+       coalesce((SELECT e.kind FROM inventory.equipment_events e WHERE e.item_id = i.id ORDER BY e.id DESC LIMIT 1), ''),
+       coalesce(i.purpose, ''), coalesce(i.model, ''), coalesce(i.value_text, ''), i.received_at, i.last_used_at, coalesce(i.condition, 'ok')
 FROM inventory.items i`
 
 func loadRow(row pgx.Row) (Item, error) {
 	var item Item
 	var last string
-	err := row.Scan(&item.ID, &item.Code, &item.Name, &item.Category, &item.Spec, &item.Unit, &item.LocationID, &item.MinQty, &item.Tracked, &item.PhotoID, &item.Note, &item.Voided, &item.VoidReason, &item.Qty, &last)
+	var received, used *time.Time
+	err := row.Scan(&item.ID, &item.Code, &item.Name, &item.Category, &item.Spec, &item.Unit, &item.LocationID, &item.MinQty, &item.Tracked, &item.PhotoID, &item.Note, &item.Voided, &item.VoidReason, &item.Qty, &last, &item.Purpose, &item.Model, &item.Value, &received, &used, &item.Condition)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Item{}, ErrNotFound
 	}
@@ -655,6 +669,15 @@ func loadRow(row pgx.Row) (Item, error) {
 		return Item{}, err
 	}
 	item.State = stateOf(last)
+	if received != nil {
+		item.Received = *received
+	}
+	if used != nil {
+		item.LastUsed = *used
+	}
+	if item.Condition == "" {
+		item.Condition = "ok"
+	}
 	return item, nil
 }
 
@@ -711,10 +734,10 @@ FROM inventory.equipment_events WHERE item_id = $1 ORDER BY id DESC LIMIT 20`, i
 func insertItem(ctx context.Context, tx pgx.Tx, draft Draft) (Item, error) {
 	var item Item
 	err := tx.QueryRow(ctx, `
-INSERT INTO inventory.items (code, name, category, spec, unit, location_id, min_qty, tracked, photo_id, note)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+INSERT INTO inventory.items (code, name, category, spec, unit, location_id, min_qty, tracked, photo_id, note, purpose, model, value_text, condition, received_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, COALESCE($15, now()))
 RETURNING id, code, name, category, spec, unit, coalesce(location_id, 0), min_qty, tracked, coalesce(photo_id, 0), note, false::boolean, ''::text`,
-		draft.Code, draft.Name, draft.Category, draft.Spec, draft.Unit, nullID(draft.LocationID), draft.MinQty, draft.Tracked, nullID(draft.PhotoID), draft.Note,
+		draft.Code, draft.Name, draft.Category, draft.Spec, draft.Unit, nullID(draft.LocationID), draft.MinQty, draft.Tracked, nullID(draft.PhotoID), draft.Note, draft.Purpose, draft.Model, draft.Value, draft.Condition, draft.Received,
 	).Scan(&item.ID, &item.Code, &item.Name, &item.Category, &item.Spec, &item.Unit, &item.LocationID, &item.MinQty, &item.Tracked, &item.PhotoID, &item.Note, &item.Voided, &item.VoidReason)
 	if err != nil {
 		return Item{}, mapUnique(err)
@@ -731,6 +754,13 @@ func cleanDraft(draft Draft, creating bool) (Draft, error) {
 	draft.Spec = strings.TrimSpace(draft.Spec)
 	draft.Unit = strings.TrimSpace(draft.Unit)
 	draft.Note = strings.TrimSpace(draft.Note)
+	draft.Purpose = strings.TrimSpace(draft.Purpose)
+	draft.Model = strings.TrimSpace(draft.Model)
+	draft.Value = strings.TrimSpace(draft.Value)
+	draft.Condition = strings.TrimSpace(draft.Condition)
+	if draft.Condition == "" {
+		draft.Condition = "ok"
+	}
 	if draft.Unit == "" {
 		draft.Unit = "个"
 	}
@@ -738,6 +768,9 @@ func cleanDraft(draft Draft, creating bool) (Draft, error) {
 		return Draft{}, ErrBadInput
 	}
 	if utf8.RuneCountInString(draft.Spec) > 80 || utf8.RuneCountInString(draft.Unit) > 10 || utf8.RuneCountInString(draft.Note) > 500 || draft.MinQty < 0 || draft.Qty < 0 {
+		return Draft{}, ErrBadInput
+	}
+	if utf8.RuneCountInString(draft.Purpose) > 80 || utf8.RuneCountInString(draft.Model) > 80 || utf8.RuneCountInString(draft.Value) > 40 || !validCondition(draft.Condition) {
 		return Draft{}, ErrBadInput
 	}
 	if draft.Tracked {
@@ -754,10 +787,42 @@ func cleanDraft(draft Draft, creating bool) (Draft, error) {
 
 func validCategory(value string) bool {
 	switch value {
-	case "器材", "消耗品", "工具", "元件":
+	case "器材", "消耗品", "工具", "元件", "设备", "仪器", "零件", "耗材", "日用品":
 		return true
 	default:
 		return false
+	}
+}
+
+func validCondition(value string) bool {
+	switch value {
+	case "ok", "repair", "replace":
+		return true
+	default:
+		return false
+	}
+}
+
+// Categories 是新建物品时的类别.
+func Categories() []string {
+	return []string{"工具", "设备", "仪器", "零件", "耗材", "日用品"}
+}
+
+// Purposes 是用途标签.
+func Purposes() []string { return []string{"维修", "科普", "竞赛"} }
+
+// ConditionText 是页面上的完好程度.
+func (i Item) ConditionText() string { return ConditionLabel(i.Condition) }
+
+// ConditionLabel 返回完好程度.
+func ConditionLabel(value string) string {
+	switch value {
+	case "repair":
+		return "需维修"
+	case "replace":
+		return "需更换"
+	default:
+		return "正常"
 	}
 }
 

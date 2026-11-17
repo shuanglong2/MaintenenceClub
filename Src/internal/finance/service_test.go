@@ -71,20 +71,20 @@ func TestFinanceFlow(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		last, err = svc.Create(ctx, tellerActor, Draft{
+		last, err = svc.Create(ctx, leaderActor, Draft{
 			Kind: row.Kind, Cents: row.Cents, Date: &day, CategoryID: byName[row.Category], Note: noteOf(row),
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	if _, err := svc.Create(ctx, leaderActor, Draft{Kind: KindIn, Cents: 100, CategoryID: byName["其他"]}); !errors.Is(err, ErrForbidden) {
-		t.Fatalf("组长不能改财务: %v", err)
+	if _, err := svc.Create(ctx, tellerActor, Draft{Kind: KindIn, Cents: 100, CategoryID: byName["其他"]}); !errors.Is(err, ErrForbidden) {
+		t.Fatalf("组员不能改财务: %v", err)
 	}
 	if _, _, err := svc.List(ctx, memberActor, Filter{}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("组员不能看财务: %v", err)
 	}
-	if err := svc.Void(ctx, tellerActor, last.ID, "这笔记错了"); err != nil {
+	if err := svc.Void(ctx, leaderActor, last.ID, "这笔记错了"); err != nil {
 		t.Fatal(err)
 	}
 	rows, err := svc.Rows(ctx, leaderActor)
@@ -113,7 +113,7 @@ func TestFinanceFlow(t *testing.T) {
 	if err != nil || total != 10 {
 		t.Fatalf("一月 %d %v", total, err)
 	}
-	if listed[0].ActorName != "财务甲" {
+	if listed[0].ActorName != "leader" {
 		t.Fatal(listed[0].ActorName)
 	}
 	raw, err := svc.Export(ctx, leaderActor, Filter{})
@@ -139,7 +139,7 @@ func TestFinanceFlow(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT amount_cents FROM finance.entries WHERE id = $1`, listed[0].ID).Scan(&amount); err != nil || amount == 1 {
 		t.Fatal(err, amount)
 	}
-	if err := svc.Attach(ctx, tellerActor, listed[0].ID, "invoice.pdf", strings.NewReader("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")); err != nil {
+	if err := svc.Attach(ctx, leaderActor, listed[0].ID, "invoice.pdf", strings.NewReader("%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n")); err != nil {
 		t.Fatal(err)
 	}
 	withFile, err := svc.Get(ctx, leaderActor, listed[0].ID)
@@ -158,10 +158,10 @@ func TestFinanceFlow(t *testing.T) {
 	if err != nil || !strings.Contains(string(html), "750.00") || !strings.Contains(string(html), "370.00") {
 		t.Fatal(err, html)
 	}
-	if err := svc.AddCategory(ctx, tellerActor, "交通"); err != nil {
+	if err := svc.AddCategory(ctx, leaderActor, "交通"); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.AddCategory(ctx, tellerActor, "交通"); !errors.Is(err, ErrBadInput) {
+	if err := svc.AddCategory(ctx, leaderActor, "交通"); !errors.Is(err, ErrBadInput) {
 		t.Fatal(err)
 	}
 }

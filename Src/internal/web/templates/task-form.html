@@ -3,12 +3,14 @@
 <form class="stack" method="post" action="{{if .Editing}}/tasks/{{.Task.Task.ID}}{{else}}/tasks{{end}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>标题<input name="title" value="{{.Task.Task.Title}}" required maxlength="80"></label>
+<label>联系方式<input name="contact" value="{{.Task.Task.Contact}}" maxlength="80"></label>
+<label class="check"><input type="checkbox" name="urgent" value="1" {{if eq .Task.Task.Priority "high"}}checked{{end}}> 紧急</label>
 <label>类型<select name="kind">{{range .Task.Kinds}}<option value="{{.}}" {{if eq . $.Task.Task.Kind}}selected{{end}}>{{.}}</option>{{end}}</select></label>
 <label>状态<select name="status">{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}</select></label>
 <label>优先级<select name="priority">{{range .Task.Priorities}}<option value="{{.}}" {{if eq . $.Task.Task.Priority}}selected{{end}}>{{taskPriority .}}</option>{{end}}</select></label>
 <label>负责人<select name="owner">{{range .Task.People}}<option value="{{.ID}}" {{if eq .ID $.Task.Task.OwnerID}}selected{{end}}>{{.Label}}</option>{{end}}</select></label>
 <label>截止日期<input type="date" name="due" value="{{.Task.Task.DueText}}"></label>
-<label>关联活动
+<label>关联日程
 <select name="event">
 <option value="">不关联</option>
 {{range .Task.Events}}<option value="{{.ID}}" {{if eq .ID $.Task.Task.EventID}}selected{{end}}>{{.Label}}</option>{{end}}

@@ -1,6 +1,9 @@
 package events
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 // CST 是页面上使用的北京时间. 数据库里仍存 UTC.
 var CST = time.FixedZone("CST", 8*3600)
@@ -135,6 +138,20 @@ func Heads(weekStart time.Weekday) []string {
 		out[i] = weekNames[(int(weekStart)+i)%7]
 	}
 	return out
+}
+
+// URL 是点开这条日程的地址.
+func (e Event) URL() string {
+	if e.Href != "" {
+		return e.Href
+	}
+	return "/events/" + strconv.FormatInt(e.ID, 10)
+}
+
+// Place 把额外的条目放进已经生成的月历.
+func Place(days []Day, items []Event) []Day {
+	placeOnDays(days, items)
+	return days
 }
 
 func placeOnDays(days []Day, items []Event) {

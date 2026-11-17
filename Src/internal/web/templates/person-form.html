@@ -4,17 +4,18 @@
 {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 <form class="stack" method="post" action="{{if .Editing}}/people/{{.Person.ID}}{{else}}/people{{end}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>姓名<input name="name" value="{{.Person.Name}}" required></label>
-{{if not .Editing}}<label>登录名<input name="login" value="{{.Person.Login}}" required><span class="hint">2 到 32 位, 小写字母或数字开头, 可含下划线.</span></label>{{end}}
+<label>姓名<input name="name" value="{{.Person.Name}}"></label>
+{{if not .Editing}}<label>学号<input name="login" value="{{.Person.Login}}" required><span class="hint">用学号登录. 密码自动生成 8 位, 只显示一次.</span></label>{{end}}
+<label>班级<input name="class_name" value="{{.Person.ClassName}}" maxlength="40"></label>
 <label>职务
 <select name="role">
-<option value="leader" {{if eq .Person.Role "leader"}}selected{{end}}>组长</option>
-<option value="deputy" {{if eq .Person.Role "deputy"}}selected{{end}}>副组长</option>
 <option value="member" {{if or (eq .Person.Role "member") (not .Editing)}}selected{{end}}>组员</option>
+<option value="leader" {{if eq .Person.Role "leader"}}selected{{end}}>组长</option>
+{{if .Editing}}<option value="deputy" {{if eq .Person.Role "deputy"}}selected{{end}}>副组长</option>{{end}}
 </select>
 </label>
-<label class="check"><input type="checkbox" name="finance" value="1" {{if .Person.Finance}}checked{{end}}> 财务</label>
-<label>学号<input name="student_id" value="{{.Person.StudentID}}"></label>
+{{if .Editing}}<label class="check"><input type="checkbox" name="finance" value="1" {{if .Person.Finance}}checked{{end}}> 财务</label>
+<label>学号<input name="student_id" value="{{.Person.StudentID}}"></label>{{end}}
 <label>联系方式<input name="contact" value="{{.Person.Contact}}"></label>
 <label>备注<textarea name="note" rows="3">{{.Person.Note}}</textarea></label>
 {{if not .Editing}}<label>初始密码<input name="password" type="password" autocomplete="new-password"><span class="hint">留空则自动生成, 只显示一次.</span></label>{{end}}

@@ -6,13 +6,33 @@
 <label>名称<input name="name" value="{{.Inv.Item.Name}}" required></label>
 <label>类别
 <select name="category">
-<option value="器材" {{if eq .Inv.Item.Category "器材"}}selected{{end}}>器材</option>
 <option value="工具" {{if eq .Inv.Item.Category "工具"}}selected{{end}}>工具</option>
-<option value="消耗品" {{if eq .Inv.Item.Category "消耗品"}}selected{{end}}>消耗品</option>
-<option value="元件" {{if eq .Inv.Item.Category "元件"}}selected{{end}}>元件</option>
+<option value="设备" {{if eq .Inv.Item.Category "设备"}}selected{{end}}>设备</option>
+<option value="仪器" {{if eq .Inv.Item.Category "仪器"}}selected{{end}}>仪器</option>
+<option value="零件" {{if eq .Inv.Item.Category "零件"}}selected{{end}}>零件</option>
+<option value="耗材" {{if eq .Inv.Item.Category "耗材"}}selected{{end}}>耗材</option>
+<option value="日用品" {{if eq .Inv.Item.Category "日用品"}}selected{{end}}>日用品</option>
 </select>
 </label>
-<label>规格<input name="spec" value="{{.Inv.Item.Spec}}"></label>
+<label>用途
+<select name="purpose">
+<option value="">未注明</option>
+<option value="维修" {{if eq .Inv.Item.Purpose "维修"}}selected{{end}}>维修</option>
+<option value="科普" {{if eq .Inv.Item.Purpose "科普"}}selected{{end}}>科普</option>
+<option value="竞赛" {{if eq .Inv.Item.Purpose "竞赛"}}selected{{end}}>竞赛</option>
+</select>
+</label>
+<label>型号<input name="model" value="{{.Inv.Item.Model}}"></label>
+<label>规格或阻值<input name="value" value="{{.Inv.Item.Value}}" placeholder="例如 10kΩ"></label>
+<label>规格补充<input name="spec" value="{{.Inv.Item.Spec}}"></label>
+<label>状态
+<select name="condition">
+<option value="ok" {{if or (eq .Inv.Item.Condition "ok") (eq .Inv.Item.Condition "")}}selected{{end}}>正常</option>
+<option value="repair" {{if eq .Inv.Item.Condition "repair"}}selected{{end}}>需维修</option>
+<option value="replace" {{if eq .Inv.Item.Condition "replace"}}selected{{end}}>需更换</option>
+</select>
+</label>
+<label>入库日期<input type="date" name="received" value="{{if not .Inv.Item.Received.IsZero}}{{.Inv.Item.Received.Format "2006-01-02"}}{{end}}"></label>
 <label>单位<input name="unit" value="{{.Inv.Item.Unit}}"></label>
 <label>位置
 <select name="location">

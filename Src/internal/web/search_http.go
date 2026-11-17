@@ -81,7 +81,7 @@ func (s *server) findGroups(r *http.Request, user visitor, query string) ([]find
 			return nil, err
 		}
 		if err == nil {
-			group := findGroup{Title: "活动"}
+			group := findGroup{Title: "日程"}
 			for _, event := range found {
 				group.Hits = append(group.Hits, findHit{Href: "/events/" + strconv.FormatInt(event.ID, 10), Label: event.Title})
 			}

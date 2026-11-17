@@ -65,6 +65,10 @@ type Task struct {
 	CreatedBy   int64
 	CreatedName string
 	Updated     time.Time
+	Created     time.Time
+	Contact     string
+	ClaimedID   int64
+	ClaimedName string
 	People      []Person
 	Items       []ItemRef
 	Comments    []Comment
@@ -90,17 +94,19 @@ type Draft struct {
 	EventID  int64
 	People   []int64
 	Items    []int64
+	Contact  string
 }
 
 // Filter 是列表筛选.
 type Filter struct {
-	Mine   bool
-	Kind   string
-	Status string
-	Query  string
-	Sort   string
-	Offset int
-	Limit  int
+	Mine     bool
+	Kind     string
+	Status   string
+	Query    string
+	Sort     string
+	Offset   int
+	Limit    int
+	ShowDone bool
 }
 
 // Column 是看板的一列.
@@ -181,7 +187,7 @@ SELECT id, code, name FROM inventory.items WHERE voided_at IS NULL ORDER BY code
 	return out, rows.Err()
 }
 
-// Create 新建任务. 在组的人都可以建.
+// Create 新建任务. 网页只让组长打开, 以后的 QQ 机器人也调用这里.
 func (s *Service) Create(ctx context.Context, actor Actor, draft Draft) (Task, error) {
 	if !canUse(actor) {
 		return Task{}, ErrForbidden
@@ -208,10 +214,10 @@ func (s *Service) Create(ctx context.Context, actor Actor, draft Draft) (Task, e
 	var id int64
 	err = tx.QueryRow(ctx, `
 INSERT INTO tasks.tasks (
-    title, body, kind, status, priority, owner_id, owner_name, due_on, event_id, created_by, created_name
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    title, body, kind, status, priority, owner_id, owner_name, due_on, event_id, created_by, created_name, contact
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id`,
-		clean.Title, clean.Body, clean.Kind, clean.Status, clean.Priority, clean.OwnerID, owner, clean.Due, nullID(clean.EventID), actor.ID, actor.Name,
+		clean.Title, clean.Body, clean.Kind, clean.Status, clean.Priority, clean.OwnerID, owner, clean.Due, nullID(clean.EventID), actor.ID, actor.Name, clean.Contact,
 	).Scan(&id)
 	if err != nil {
 		return Task{}, err
@@ -527,13 +533,14 @@ func cleanDraft(draft Draft, creating bool) (Draft, error) {
 	draft.Title = strings.TrimSpace(draft.Title)
 	draft.Body = strings.TrimSpace(draft.Body)
 	draft.Kind = strings.TrimSpace(draft.Kind)
+	draft.Contact = strings.TrimSpace(draft.Contact)
 	draft.People = uniqueIDs(draft.People)
 	draft.Items = uniqueIDs(draft.Items)
 	if draft.Title == "" || utf8.RuneCountInString(draft.Title) > 80 {
 		return Draft{}, errInput("标题需要 1 到 80 个字")
 	}
-	if utf8.RuneCountInString(draft.Body) > 8000 {
-		return Draft{}, errInput("说明太长")
+	if utf8.RuneCountInString(draft.Body) > 8000 || utf8.RuneCountInString(draft.Contact) > 80 {
+		return Draft{}, errInput("说明或联系方式太长")
 	}
 	if !validKind(draft.Kind) {
 		return Draft{}, errInput("类型不正确")

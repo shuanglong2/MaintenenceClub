@@ -1,6 +1,7 @@
 {{define "event-body"}}
 <h1>{{.Evt.Event.Title}}</h1>
-<p class="tools"><a href="/events">月历</a> <a href="/tasks/new?event={{.Evt.Event.ID}}">建任务</a> {{if .Evt.Manage}}<a href="/events/{{.Evt.Event.ID}}/edit">编辑</a>{{end}}</p>
+<p class="tools"><a href="/events">月历</a> {{if .Evt.Manage}}<a href="/events/{{.Evt.Event.ID}}/edit">编辑</a>{{end}}</p>
+<p>{{if .Evt.Event.MemberVisible}}组员可见{{else}}仅管理层可见{{end}}</p>
 <p>{{.Evt.Event.Kind}} · {{statusLabel .Evt.Event.Status}} · {{whenLabel .Evt.Event}}</p>
 {{if .Evt.Event.Place}}<p>地点: {{.Evt.Event.Place}}</p>{{end}}
 <p>负责人: {{.Evt.Event.OwnerName}}</p>

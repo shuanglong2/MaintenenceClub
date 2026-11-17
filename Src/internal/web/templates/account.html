@@ -2,7 +2,22 @@
 <h1>我的资料</h1>
 {{if .User.MustChange}}<p class="notice">请先修改密码, 之后才能使用其他功能.</p>{{end}}
 {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-<p>{{.Person.Name}} · {{.Person.RoleLabel}}</p>
+{{if .Person.AvatarID}}<p><img class="avatar" src="/files/{{.Person.AvatarID}}" alt=""></p>{{end}}
+<p>{{.Person.Name}} · {{.Person.RoleLabel}}{{if .Person.ClassName}} · {{.Person.ClassName}}{{end}}</p>
+<form class="stack" method="post" action="/account/profile">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>个人信息</h2>
+<label>姓名<input name="name" value="{{.Person.Name}}" required></label>
+<label>学号<input name="student_id" value="{{if .Person.StudentID}}{{.Person.StudentID}}{{else}}{{.Person.Login}}{{end}}" required></label>
+<label>班级<input name="class_name" value="{{.Person.ClassName}}" maxlength="40"></label>
+<button type="submit">保存资料</button>
+</form>
+<form class="stack" method="post" action="/account/avatar" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<h2>头像</h2>
+<label>图片<input type="file" name="file" accept="image/*" required></label>
+<button type="submit">上传头像</button>
+</form>
 <form class="stack" method="post" action="/account/password">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <h2>修改密码</h2>

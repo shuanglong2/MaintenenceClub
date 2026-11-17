@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/boards"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/finance"
@@ -103,6 +104,7 @@ type page struct {
 	Inv        invView
 	Evt        eventView
 	Task       taskView
+	Gather     gatherView
 	Log        logView
 	Fin        finView
 	Sys        systemView
@@ -124,6 +126,7 @@ type server struct {
 	inv       *inventory.Service
 	events    *events.Service
 	tasks     *tasks.Service
+	boards    *boards.Service
 	logs      *logs.Service
 	finance   *finance.Service
 	weekStart time.Weekday
@@ -139,6 +142,7 @@ type Option struct {
 	Inventory    *inventory.Service
 	Events       *events.Service
 	Tasks        *tasks.Service
+	Boards       *boards.Service
 	Logs         *logs.Service
 	Finance      *finance.Service
 	WeekStart    time.Weekday
@@ -158,6 +162,7 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 		"statusLabel":  events.StatusLabel,
 		"whenLabel":    events.WhenLabel,
 		"taskStatus":   tasks.StatusLabel,
+		"boardStatus":  boards.StatusLabel,
 		"taskPriority": tasks.PriorityLabel,
 		"logKind":      logs.KindLabel,
 		"logStatus":    logs.StatusLabel,
@@ -172,7 +177,7 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
 	s := &server{
-		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks, logs: opt.Logs, finance: opt.Finance,
+		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks, boards: opt.Boards, logs: opt.Logs, finance: opt.Finance,
 		weekStart: opt.WeekStart, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl,
 	}
 	mux := http.NewServeMux()
@@ -213,6 +218,8 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /people/{id}/reset-password", s.peopleReset)
 	mux.HandleFunc("GET /account", s.account)
 	mux.HandleFunc("POST /account/password", s.accountPassword)
+	mux.HandleFunc("POST /account/profile", s.accountProfile)
+	mux.HandleFunc("POST /account/avatar", s.accountAvatar)
 	mux.HandleFunc("POST /account/contact", s.accountContact)
 	mux.HandleFunc("GET /audit", s.auditList)
 	mux.HandleFunc("GET /docs", s.docsIndex)
@@ -264,6 +271,18 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /inventory/stocktakes", s.stocktakeCreate)
 	mux.HandleFunc("POST /inventory/stocktakes/{id}", s.stocktakeSave)
 	mux.HandleFunc("GET /inventory/stocktakes/{id}", s.stocktakeShow)
+	mux.HandleFunc("GET /activities", s.gatherList)
+	mux.HandleFunc("POST /activities", s.gatherCreate)
+	mux.HandleFunc("POST /activities/{id}/join", s.gatherJoin)
+	mux.HandleFunc("POST /activities/{id}/leave", s.gatherLeave)
+	mux.HandleFunc("POST /activities/{id}/status", s.gatherStatus)
+	mux.HandleFunc("POST /activities/{id}/assign", s.gatherAssign)
+	mux.HandleFunc("GET /competitions", s.gatherList)
+	mux.HandleFunc("POST /competitions", s.gatherCreate)
+	mux.HandleFunc("POST /competitions/{id}/join", s.gatherJoin)
+	mux.HandleFunc("POST /competitions/{id}/leave", s.gatherLeave)
+	mux.HandleFunc("POST /competitions/{id}/status", s.gatherStatus)
+	mux.HandleFunc("POST /competitions/{id}/assign", s.gatherAssign)
 	mux.HandleFunc("GET /events", s.eventsMonth)
 	mux.HandleFunc("GET /events/list", s.eventsList)
 	mux.HandleFunc("GET /events/new", s.eventsNew)
@@ -283,6 +302,10 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /tasks/new", s.tasksNew)
 	mux.HandleFunc("POST /tasks", s.tasksCreate)
 	mux.HandleFunc("GET /tasks/{id}/edit", s.tasksEdit)
+	mux.HandleFunc("POST /tasks/{id}/claim", s.tasksClaim)
+	mux.HandleFunc("POST /tasks/{id}/assign", s.tasksAssign)
+	mux.HandleFunc("POST /tasks/{id}/done", s.tasksDone)
+	mux.HandleFunc("POST /tasks/{id}/release", s.tasksRelease)
 	mux.HandleFunc("POST /tasks/{id}/status", s.tasksStatus)
 	mux.HandleFunc("POST /tasks/{id}/comments", s.tasksComment)
 	mux.HandleFunc("POST /tasks/{id}", s.tasksUpdate)
@@ -305,6 +328,7 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /finance/{id}/void", s.financeVoid)
 	mux.HandleFunc("POST /finance/{id}/files", s.financeUpload)
 	mux.HandleFunc("GET /finance/{id}", s.financeShow)
+	mux.HandleFunc("GET /system/live", s.systemLive)
 	mux.HandleFunc("GET /system", s.systemStatus)
 	mux.HandleFunc("/", s.notFound)
 }

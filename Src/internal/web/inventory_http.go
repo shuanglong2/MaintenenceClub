@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/skip2/go-qrcode"
 
@@ -28,8 +29,11 @@ type invView struct {
 	Panels     []inventory.ItemPanel
 	Query      string
 	Category   string
+	Purpose    string
+	Condition  string
 	Manage     bool
 	Notice     string
+	HasItem    bool
 }
 
 // RegisterInventoryWidget 把低库存登记到首页.
@@ -58,6 +62,19 @@ func (s *server) inventoryList(w http.ResponseWriter, r *http.Request) {
 		s.showInvErr(w, r, err)
 		return
 	}
+	purpose := strings.TrimSpace(r.URL.Query().Get("purpose"))
+	condition := strings.TrimSpace(r.URL.Query().Get("condition"))
+	shown := make([]inventory.Item, 0, len(items))
+	for _, item := range items {
+		if purpose != "" && !strings.Contains(item.Purpose, purpose) {
+			continue
+		}
+		if condition != "" && item.Condition != condition {
+			continue
+		}
+		shown = append(shown, item)
+	}
+	items = shown
 	locs, err := s.inv.Locations(r.Context())
 	if err != nil {
 		s.showInvErr(w, r, err)
@@ -70,7 +87,16 @@ func (s *server) inventoryList(w http.ResponseWriter, r *http.Request) {
 	}
 	view := invView{
 		Items: items, Locations: locs, Query: strings.TrimSpace(r.URL.Query().Get("q")),
-		Category: strings.TrimSpace(r.URL.Query().Get("category")), Manage: inventory.Manage(actor),
+		Category: strings.TrimSpace(r.URL.Query().Get("category")), Purpose: purpose, Condition: condition,
+		Manage: inventory.Manage(actor),
+	}
+	if raw := r.URL.Query().Get("id"); raw != "" {
+		if id, err := strconv.ParseInt(raw, 10, 64); err == nil && id > 0 {
+			if item, err := s.inv.Get(r.Context(), actor, id); err == nil {
+				view.Item = item
+				view.HasItem = true
+			}
+		}
 	}
 	if len(voided) > 0 {
 		view.Notice = "已作废 " + strconv.Itoa(len(voided)) + " 件, 可在物品页恢复."
@@ -564,9 +590,17 @@ func readItemDraft(r *http.Request) inventory.Draft {
 	location, _ := strconv.ParseInt(r.FormValue("location"), 10, 64)
 	minQty, _ := strconv.Atoi(r.FormValue("min_qty"))
 	qty, _ := strconv.Atoi(r.FormValue("qty"))
+	var received *time.Time
+	if raw := r.FormValue("received"); raw != "" {
+		if parsed, err := time.ParseInLocation("2006-01-02", raw, time.FixedZone("CST", 8*3600)); err == nil {
+			received = &parsed
+		}
+	}
 	return inventory.Draft{
 		Code: r.FormValue("code"), Name: r.FormValue("name"), Category: r.FormValue("category"),
 		Spec: r.FormValue("spec"), Unit: r.FormValue("unit"), LocationID: location,
 		MinQty: minQty, Tracked: r.FormValue("tracked") == "1", Note: r.FormValue("note"), Qty: qty,
+		Purpose: r.FormValue("purpose"), Model: r.FormValue("model"), Value: r.FormValue("value"),
+		Condition: r.FormValue("condition"), Received: received,
 	}
 }

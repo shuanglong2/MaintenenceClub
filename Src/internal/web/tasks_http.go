@@ -62,6 +62,10 @@ type taskView struct {
 	Notes      []taskNote
 	BodyHTML   template.HTML
 	CanEdit    bool
+	HasTask    bool
+	Leader     bool
+	Query      string
+	ShowDone   bool
 	Mine       bool
 	Kind       string
 	Status     string
@@ -126,17 +130,10 @@ func (s *server) tasksList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := tasks.Filter{
-		Mine: r.URL.Query().Get("mine") == "1", Kind: r.URL.Query().Get("kind"),
-		Status: r.URL.Query().Get("status"), Sort: r.URL.Query().Get("sort"), Limit: 30,
+		Kind: r.URL.Query().Get("kind"), Status: r.URL.Query().Get("status"),
+		Query: strings.TrimSpace(r.URL.Query().Get("q")), ShowDone: r.URL.Query().Get("done") == "1",
 	}
-	pageNo := 1
-	if raw := r.URL.Query().Get("page"); raw != "" {
-		if n, err := strconv.Atoi(raw); err == nil && n > 1 {
-			pageNo = n
-		}
-	}
-	filter.Offset = (pageNo - 1) * filter.Limit
-	items, total, err := s.tasks.List(r.Context(), actor, filter)
+	items, err := s.tasks.Desk(r.Context(), actor, filter)
 	if err != nil {
 		s.showTaskErr(w, r, err)
 		return
@@ -145,14 +142,28 @@ func (s *server) tasksList(w http.ResponseWriter, r *http.Request) {
 	for _, item := range items {
 		cards = append(cards, taskCard{Task: item, CanEdit: tasks.CanEdit(actor, item)})
 	}
-	s.render(w, r, http.StatusOK, page{
-		Title: "任务", Body: "tasks-body",
-		Task: taskView{
-			Tasks: cards, Kinds: tasks.Kinds(), Statuses: tasks.Statuses(),
-			Mine: filter.Mine, Kind: filter.Kind, Status: filter.Status, Sort: filter.Sort,
-			Page: pageNo, HasNext: filter.Offset+len(items) < total, Total: total,
-		},
-	})
+	view := taskView{
+		Tasks: cards, Kinds: tasks.RepairKinds(), Statuses: tasks.Statuses(),
+		Kind: filter.Kind, Status: filter.Status, Query: filter.Query, ShowDone: filter.ShowDone,
+		Leader: actor.Role == people.RoleLeader,
+	}
+	if raw := r.URL.Query().Get("id"); raw != "" {
+		if id, err := strconv.ParseInt(raw, 10, 64); err == nil && id > 0 {
+			if item, err := s.tasks.Open(r.Context(), actor, id); err == nil {
+				view.Task = item
+				view.HasTask = true
+				view.BodyHTML = mdown.Render(item.Body)
+			}
+		}
+	}
+	if view.Leader {
+		if choices, err := s.tasks.People(r.Context(), actor); err == nil {
+			for _, person := range choices {
+				view.People = append(view.People, taskChoice{ID: person.ID, Label: person.Name})
+			}
+		}
+	}
+	s.render(w, r, http.StatusOK, page{Title: "任务", Body: "tasks-body", Task: view})
 }
 
 func (s *server) tasksBoard(w http.ResponseWriter, r *http.Request) {
@@ -193,7 +204,11 @@ func (s *server) tasksNew(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	item := tasks.Task{Kind: "其他", Status: "todo", Priority: "normal", OwnerID: actor.ID}
+	if actor.Role != people.RoleLeader {
+		s.showTaskErr(w, r, tasks.ErrForbidden)
+		return
+	}
+	item := tasks.Task{Kind: "电子设备类维修", Status: "todo", Priority: "normal", OwnerID: actor.ID}
 	if raw := r.URL.Query().Get("event"); raw != "" {
 		id, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil || id < 1 || s.events == nil {
@@ -220,7 +235,7 @@ func (s *server) tasksNew(w http.ResponseWriter, r *http.Request) {
 		Title: "新建任务", Body: "task-form-body",
 		Task: taskView{
 			Task: item, People: people, Items: items, Events: s.taskEvents(r, actor, item),
-			Kinds: tasks.Kinds(), Statuses: tasks.Statuses(), Priorities: tasks.Priorities(),
+			Kinds: tasks.RepairKinds(), Statuses: tasks.Statuses(), Priorities: tasks.Priorities(),
 		},
 	})
 }
@@ -228,6 +243,10 @@ func (s *server) tasksNew(w http.ResponseWriter, r *http.Request) {
 func (s *server) tasksCreate(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.taskUser(w, r)
 	if !ok {
+		return
+	}
+	if actor.Role != people.RoleLeader {
+		s.showTaskErr(w, r, tasks.ErrForbidden)
 		return
 	}
 	draft, err := readTaskDraft(r)
@@ -240,10 +259,46 @@ func (s *server) tasksCreate(w http.ResponseWriter, r *http.Request) {
 		s.showTaskErr(w, r, err)
 		return
 	}
-	http.Redirect(w, r, "/tasks/"+strconv.FormatInt(item.ID, 10), http.StatusSeeOther)
+	http.Redirect(w, r, "/tasks?id="+strconv.FormatInt(item.ID, 10), http.StatusSeeOther)
 }
 
 func (s *server) tasksShow(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.taskUser(w, r); !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	http.Redirect(w, r, "/tasks?id="+strconv.FormatInt(id, 10), http.StatusSeeOther)
+}
+
+func (s *server) tasksClaim(w http.ResponseWriter, r *http.Request) {
+	s.taskAct(w, r, func(actor tasks.Actor, id int64) error {
+		return s.tasks.Claim(r.Context(), actor, id)
+	})
+}
+
+func (s *server) tasksAssign(w http.ResponseWriter, r *http.Request) {
+	s.taskAct(w, r, func(actor tasks.Actor, id int64) error {
+		person, _ := strconv.ParseInt(r.FormValue("person"), 10, 64)
+		return s.tasks.Assign(r.Context(), actor, id, person)
+	})
+}
+
+func (s *server) tasksDone(w http.ResponseWriter, r *http.Request) {
+	s.taskAct(w, r, func(actor tasks.Actor, id int64) error {
+		return s.tasks.Finish(r.Context(), actor, id)
+	})
+}
+
+func (s *server) tasksRelease(w http.ResponseWriter, r *http.Request) {
+	s.taskAct(w, r, func(actor tasks.Actor, id int64) error {
+		return s.tasks.Release(r.Context(), actor, id)
+	})
+}
+
+func (s *server) taskAct(w http.ResponseWriter, r *http.Request, fn func(tasks.Actor, int64) error) {
 	actor, ok := s.taskUser(w, r)
 	if !ok {
 		return
@@ -252,19 +307,11 @@ func (s *server) tasksShow(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	item, err := s.tasks.Get(r.Context(), actor, id)
-	if err != nil {
+	if err := fn(actor, id); err != nil {
 		s.showTaskErr(w, r, err)
 		return
 	}
-	notes := make([]taskNote, 0, len(item.Comments))
-	for _, comment := range item.Comments {
-		notes = append(notes, taskNote{Author: comment.Author, At: comment.At, HTML: mdown.Render(comment.Body)})
-	}
-	s.render(w, r, http.StatusOK, page{
-		Title: item.Title, Body: "task-body",
-		Task: taskView{Task: item, Notes: notes, BodyHTML: mdown.Render(item.Body), CanEdit: tasks.CanEdit(actor, item)},
-	})
+	http.Redirect(w, r, "/tasks?id="+strconv.FormatInt(id, 10), http.StatusSeeOther)
 }
 
 func (s *server) tasksEdit(w http.ResponseWriter, r *http.Request) {
@@ -454,10 +501,14 @@ func readTaskDraft(r *http.Request) (tasks.Draft, error) {
 		}
 		eventID = parsed
 	}
+	priority := r.FormValue("priority")
+	if r.FormValue("urgent") == "1" {
+		priority = "high"
+	}
 	return tasks.Draft{
 		Title: r.FormValue("title"), Body: r.FormValue("body"), Kind: r.FormValue("kind"),
-		Status: r.FormValue("status"), Priority: r.FormValue("priority"), OwnerID: owner, Due: due, EventID: eventID,
-		People: formIDs(r, "person"), Items: formIDs(r, "item"),
+		Status: r.FormValue("status"), Priority: priority, OwnerID: owner, Due: due, EventID: eventID,
+		People: formIDs(r, "person"), Items: formIDs(r, "item"), Contact: r.FormValue("contact"),
 	}, nil
 }
 

@@ -62,7 +62,22 @@ func (s *server) peopleCreate(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	password, err := s.people.Create(r.Context(), s.actor(user), formInput(r))
+	in := formInput(r)
+	if strings.TrimSpace(in.Login) == "" {
+		in.Login = in.StudentID
+	}
+	if strings.TrimSpace(in.StudentID) == "" {
+		in.StudentID = in.Login
+	}
+	if in.Password == "" {
+		password, genErr := people.InitialPassword()
+		if genErr != nil {
+			s.internal(w, r, genErr)
+			return
+		}
+		in.Password = password
+	}
+	password, err := s.people.Create(r.Context(), s.actor(user), in)
 	if err != nil {
 		s.showErr(w, r, err)
 		return
@@ -258,6 +273,46 @@ func (s *server) accountPassword(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/account", http.StatusSeeOther)
 }
 
+func (s *server) accountProfile(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if err := s.people.UpdateSelf(r.Context(), s.actor(user), formInput(r)); err != nil {
+		s.showErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/account", http.StatusSeeOther)
+}
+
+func (s *server) accountAvatar(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	store := s.uploads()
+	if store == nil {
+		s.notFound(w, r)
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		s.showErr(w, r, people.ErrBadInput)
+		return
+	}
+	defer file.Close()
+	meta, err := store.Save(r.Context(), user.Session.User.ID, "people", header.Filename, file)
+	if err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	if err := s.people.SetAvatar(r.Context(), s.actor(user), meta.ID); err != nil {
+		s.showErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/account", http.StatusSeeOther)
+}
+
 func (s *server) accountContact(w http.ResponseWriter, r *http.Request) {
 	user, ok := s.requireUser(w, r)
 	if !ok {
@@ -324,7 +379,7 @@ func (s *server) auditList(w http.ResponseWriter, r *http.Request) {
 func formInput(r *http.Request) people.Input {
 	return people.Input{
 		Name: strings.TrimSpace(r.FormValue("name")), Login: r.FormValue("login"), Role: r.FormValue("role"),
-		Finance: r.FormValue("finance") == "1", StudentID: r.FormValue("student_id"),
+		Finance: r.FormValue("finance") == "1", StudentID: r.FormValue("student_id"), ClassName: r.FormValue("class_name"),
 		Contact: r.FormValue("contact"), Note: r.FormValue("note"), Password: r.FormValue("password"),
 	}
 }

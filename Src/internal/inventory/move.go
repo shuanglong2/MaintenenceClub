@@ -196,6 +196,10 @@ func insertMove(ctx context.Context, tx pgx.Tx, actor Actor, itemID int64, kind 
 	_, err := tx.Exec(ctx, `
 INSERT INTO inventory.movements (item_id, kind, qty, actor_id, actor_name, note, ref_type, ref_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, itemID, kind, qty, nullID(actor.ID), actor.Name, note, refType, nullID(refID))
+	if err != nil || kind != "use" {
+		return err
+	}
+	_, err = tx.Exec(ctx, `UPDATE inventory.items SET last_used_at = now(), updated_at = now() WHERE id = $1`, itemID)
 	return err
 }
 

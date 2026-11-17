@@ -23,6 +23,7 @@ func sampleHost() hostView {
 	out := hostView{CPU: "未知", Mem: "未知", NetRate: "未知", NetTotal: "未知"}
 	if total, avail, err := readMem(); err == nil && total > 0 && total >= avail {
 		out.Mem = formatBytes(total-avail) + " / " + formatBytes(total)
+		out.MemPct = int((total - avail) * 100 / total)
 	}
 	cpu1, errCPU1 := readCPU()
 	rx1, tx1, errNet1 := readNet()
@@ -32,6 +33,7 @@ func sampleHost() hostView {
 	if errCPU1 == nil && errCPU2 == nil {
 		if pct, ok := cpuPercent(cpu1, cpu2); ok {
 			out.CPU = strconv.Itoa(pct) + "%"
+			out.CPUPct = pct
 		}
 	}
 	if errNet1 == nil && errNet2 == nil && rx2 >= rx1 && tx2 >= tx1 {

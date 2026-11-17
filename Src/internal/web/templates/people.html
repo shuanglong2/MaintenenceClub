@@ -2,18 +2,16 @@
 <h1>人员</h1>
 {{if .ShowManage}}<p class="tools"><a class="go" href="/people/new">新建</a> <a href="/people/import">导入</a></p>{{end}}
 {{if not .People}}<p class="empty">还没有人员.</p>{{else}}
-<div class="table-scroll"><table>
-<thead><tr><th>姓名</th><th>职务</th><th>状态</th>{{if .ShowAudit}}<th>登录名</th>{{end}}</tr></thead>
-<tbody>
+<div class="people-grid">
 {{range .People}}
-<tr>
-<td><a href="/people/{{.ID}}">{{.Name}}</a></td>
-<td>{{.RoleLabel}}</td>
-<td>{{.StatusLabel}}</td>
-{{if $.ShowAudit}}<td>{{.Login}}</td>{{end}}
-</tr>
+<a class="person-card" href="/people/{{.ID}}">
+{{if .AvatarID}}<img src="/files/{{.AvatarID}}" alt="">{{end}}
+<strong>{{.Name}}</strong>
+<span>{{.RoleLabel}} · {{.StatusLabel}}</span>
+{{if .ClassName}}<small>{{.ClassName}}</small>{{end}}
+{{if $.ShowAudit}}<small>{{.Login}}</small>{{end}}
+</a>
 {{end}}
-</tbody>
-</table></div>
+</div>
 {{end}}
 {{end}}

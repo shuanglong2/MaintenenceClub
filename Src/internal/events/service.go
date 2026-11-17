@@ -60,35 +60,38 @@ type Attachment struct {
 
 // Event 是一场活动.
 type Event struct {
-	ID          int64
-	Title       string
-	Kind        string
-	Place       string
-	Body        string
-	Summary     string
-	Starts      time.Time
-	Ends        time.Time
-	AllDay      bool
-	OwnerID     int64
-	OwnerName   string
-	Status      string
-	SignupUntil *time.Time
-	Attendees   []Attendee
-	Files       []Attachment
+	ID            int64
+	Title         string
+	Kind          string
+	Place         string
+	Body          string
+	Summary       string
+	Starts        time.Time
+	Ends          time.Time
+	AllDay        bool
+	OwnerID       int64
+	OwnerName     string
+	Status        string
+	SignupUntil   *time.Time
+	MemberVisible bool
+	Href          string
+	Attendees     []Attendee
+	Files         []Attachment
 }
 
 // Draft 是创建或修改时提交的内容.
 type Draft struct {
-	Title       string
-	Kind        string
-	Place       string
-	Body        string
-	AllDay      bool
-	Starts      time.Time
-	Ends        time.Time
-	OwnerID     int64
-	Status      string
-	SignupUntil *time.Time
+	Title         string
+	Kind          string
+	Place         string
+	Body          string
+	AllDay        bool
+	Starts        time.Time
+	Ends          time.Time
+	OwnerID       int64
+	Status        string
+	SignupUntil   *time.Time
+	MembersHidden bool
 }
 
 // Service 管理活动.
@@ -166,11 +169,11 @@ func (s *Service) Create(ctx context.Context, actor Actor, draft Draft) (Event, 
 	var id int64
 	err = tx.QueryRow(ctx, `
 INSERT INTO events.events (
-    title, kind, starts_at, ends_at, all_day, place, body, owner_id, owner_name, status, signup_until, created_by
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'planned', $10, $11)
+    title, kind, starts_at, ends_at, all_day, place, body, owner_id, owner_name, status, signup_until, created_by, member_visible
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'planned', $10, $11, $12)
 RETURNING id`,
 		clean.Title, clean.Kind, clean.Starts, clean.Ends, clean.AllDay, clean.Place, clean.Body,
-		clean.OwnerID, name, clean.SignupUntil, actor.ID,
+		clean.OwnerID, name, clean.SignupUntil, actor.ID, !clean.MembersHidden,
 	).Scan(&id)
 	if err != nil {
 		return Event{}, err
@@ -211,10 +214,10 @@ func (s *Service) Update(ctx context.Context, actor Actor, id int64, draft Draft
 	tag, err := tx.Exec(ctx, `
 UPDATE events.events
 SET title = $2, kind = $3, starts_at = $4, ends_at = $5, all_day = $6, place = $7, body = $8,
-    owner_id = $9, owner_name = $10, status = $11, signup_until = $12, updated_at = now()
+    owner_id = $9, owner_name = $10, status = $11, signup_until = $12, member_visible = $13, updated_at = now()
 WHERE id = $1`,
 		id, clean.Title, clean.Kind, clean.Starts, clean.Ends, clean.AllDay, clean.Place, clean.Body,
-		clean.OwnerID, name, clean.Status, clean.SignupUntil,
+		clean.OwnerID, name, clean.Status, clean.SignupUntil, !clean.MembersHidden,
 	)
 	if err != nil {
 		return Event{}, err
@@ -246,7 +249,7 @@ func (s *Service) CopyNextWeek(ctx context.Context, actor Actor, id int64) (Even
 	draft := Draft{
 		Title: current.Title, Kind: current.Kind, Place: current.Place, Body: current.Body,
 		AllDay: current.AllDay, Starts: current.Starts.AddDate(0, 0, 7), Ends: current.Ends.AddDate(0, 0, 7),
-		OwnerID: current.OwnerID,
+		OwnerID: current.OwnerID, MembersHidden: !current.MemberVisible,
 	}
 	if current.SignupUntil != nil {
 		next := current.SignupUntil.AddDate(0, 0, 7)
@@ -272,6 +275,17 @@ func (s *Service) Get(ctx context.Context, actor Actor, id int64) (Event, error)
 	if err != nil {
 		return Event{}, err
 	}
+	if !edit(actor) && !event.MemberVisible && event.OwnerID != actor.ID {
+		seen := false
+		for _, person := range event.Attendees {
+			if person.PersonID == actor.ID {
+				seen = true
+			}
+		}
+		if !seen {
+			return Event{}, ErrNotFound
+		}
+	}
 	return event, nil
 }
 
@@ -280,21 +294,24 @@ func (s *Service) List(ctx context.Context, actor Actor, past bool) ([]Event, er
 	if !join(actor) {
 		return nil, ErrForbidden
 	}
+	seeAll := edit(actor)
 	query := `
-SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until
+SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until, member_visible
 FROM events.events
 WHERE ends_at >= $1 AND status <> 'cancelled'
+  AND ($2::boolean OR member_visible OR owner_id = $3 OR EXISTS (SELECT 1 FROM events.attendees a WHERE a.event_id = events.events.id AND a.person_id = $3))
 ORDER BY starts_at, id
 LIMIT 100`
 	if past {
 		query = `
-SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until
+SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until, member_visible
 FROM events.events
 WHERE ends_at < $1
+  AND ($2::boolean OR member_visible OR owner_id = $3 OR EXISTS (SELECT 1 FROM events.attendees a WHERE a.event_id = events.events.id AND a.person_id = $3))
 ORDER BY starts_at DESC, id DESC
 LIMIT 100`
 	}
-	rows, err := s.pool.Query(ctx, query, time.Now())
+	rows, err := s.pool.Query(ctx, query, time.Now(), seeAll, actor.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -322,11 +339,12 @@ func (s *Service) Month(ctx context.Context, actor Actor, year int, month time.M
 	from := days[0].Date
 	to := days[len(days)-1].Date.AddDate(0, 0, 1)
 	rows, err := s.pool.Query(ctx, `
-SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until
+SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until, member_visible
 FROM events.events
 WHERE starts_at < $2 AND ends_at > $1
+  AND ($3::boolean OR member_visible OR owner_id = $4 OR EXISTS (SELECT 1 FROM events.attendees a WHERE a.event_id = events.events.id AND a.person_id = $4))
 ORDER BY starts_at, id
-LIMIT 500`, from, to)
+LIMIT 500`, from, to, edit(actor), actor.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -417,7 +435,7 @@ type queryer interface {
 
 func load(ctx context.Context, q queryer, id int64) (Event, error) {
 	row := q.QueryRow(ctx, `
-SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until
+SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until, member_visible
 FROM events.events WHERE id = $1`, id)
 	event, err := scanEvent(row)
 	if err != nil {
@@ -448,11 +466,12 @@ func (s *Service) Search(ctx context.Context, actor Actor, query string) ([]Even
 	}
 	pattern := "%" + escapeLike(query) + "%"
 	rows, err := s.pool.Query(ctx, `
-SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until
+SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until, member_visible
 FROM events.events
-WHERE title ILIKE $1 ESCAPE '\' OR place ILIKE $1 ESCAPE '\' OR body ILIKE $1 ESCAPE '\'
+WHERE (title ILIKE $1 ESCAPE '\' OR place ILIKE $1 ESCAPE '\' OR body ILIKE $1 ESCAPE '\')
+  AND ($2::boolean OR member_visible OR owner_id = $3 OR EXISTS (SELECT 1 FROM events.attendees a WHERE a.event_id = events.events.id AND a.person_id = $3))
 ORDER BY starts_at DESC, id DESC
-LIMIT 8`, pattern)
+LIMIT 8`, pattern, edit(actor), actor.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +498,7 @@ func scanEvent(row scanner) (Event, error) {
 	var event Event
 	err := row.Scan(
 		&event.ID, &event.Title, &event.Kind, &event.Place, &event.Body, &event.Summary,
-		&event.Starts, &event.Ends, &event.AllDay, &event.OwnerID, &event.OwnerName, &event.Status, &event.SignupUntil,
+		&event.Starts, &event.Ends, &event.AllDay, &event.OwnerID, &event.OwnerName, &event.Status, &event.SignupUntil, &event.MemberVisible,
 	)
 	return event, err
 }

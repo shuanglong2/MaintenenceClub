@@ -1,27 +1,75 @@
 {{define "tasks-body"}}
+<header class="page-head">
 <h1>任务</h1>
-<p class="tools"><a href="/tasks/board">看板</a> <a class="go" href="/tasks/new">新建</a></p>
-<form class="filters" method="get" action="/tasks">
-<label><input type="checkbox" name="mine" value="1" {{if .Task.Mine}}checked{{end}}>只看我的</label>
-<label>类型<select name="kind"><option value="">全部</option>{{range .Task.Kinds}}<option value="{{.}}" {{if eq . $.Task.Kind}}selected{{end}}>{{.}}</option>{{end}}</select></label>
-<label>状态<select name="status"><option value="">全部</option>{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}</select></label>
-<label>排序<select name="sort">
-<option value="due" {{if or (eq $.Task.Sort "") (eq $.Task.Sort "due")}}selected{{end}}>截止日期</option>
-<option value="updated" {{if eq $.Task.Sort "updated"}}selected{{end}}>最近更新</option>
-<option value="priority" {{if eq $.Task.Sort "priority"}}selected{{end}}>优先级</option>
-</select></label>
+<p class="lead">维修接单. 自己接的在前, 紧急的其次, 还没人接的再后.</p>
+</header>
+<div class="work">
+<aside class="work-side">
+<form class="stack" method="get" action="/tasks">
+<label>类型
+<select name="kind">
+<option value="">全部</option>
+{{range .Task.Kinds}}<option value="{{.}}" {{if eq . $.Task.Kind}}selected{{end}}>{{.}}</option>{{end}}
+</select>
+</label>
+<label>状态
+<select name="status">
+<option value="">未归档</option>
+{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}
+</select>
+</label>
+<label class="check"><input type="checkbox" name="done" value="1" {{if .Task.ShowDone}}checked{{end}}> 显示已完成</label>
 <button type="submit">筛选</button>
 </form>
-{{if .Task.Tasks}}
+{{if .Task.Leader}}<p class="tools"><a class="go" href="/tasks/new">新建任务</a></p>{{end}}
+</aside>
+<section class="work-list">
+<form class="search-bar" method="get" action="/tasks">
+<input type="hidden" name="kind" value="{{.Task.Kind}}">
+<input type="hidden" name="status" value="{{.Task.Status}}">
+{{if .Task.ShowDone}}<input type="hidden" name="done" value="1">{{end}}
+<label>搜索<input name="q" value="{{.Task.Query}}" placeholder="标题"></label>
+<button type="submit">搜索</button>
+</form>
+{{if not .Task.Tasks}}<p class="empty">没有符合的任务.</p>{{end}}
 {{range .Task.Tasks}}
-<article>
-<p class="entry-line"><a href="/tasks/{{.ID}}">{{.Title}}</a> <span>{{taskStatus .Status}} · {{taskPriority .Priority}}</span></p>
-<p class="meta">{{.Kind}} · {{.OwnerName}}{{if .DueText}} · 截止 {{.DueText}}{{end}}{{if .EventTitle}} · <a href="/events/{{.EventID}}">{{.EventTitle}}</a>{{end}}</p>
-</article>
+<a class="card-link{{if and $.Task.HasTask (eq .ID $.Task.Task.ID)}} current{{end}}" href="/tasks?id={{.ID}}{{if $.Task.Kind}}&kind={{$.Task.Kind}}{{end}}{{if $.Task.Status}}&status={{$.Task.Status}}{{end}}{{if $.Task.ShowDone}}&done=1{{end}}{{if $.Task.Query}}&q={{$.Task.Query}}{{end}}">
+<strong>{{.Title}}</strong>
+<span>{{taskStatus .Status}} · {{.Kind}}</span>
+<small>{{if .ClaimedName}}{{.ClaimedName}}{{else}}未接取{{end}}{{if eq .Priority "high"}} · 紧急{{end}}</small>
+</a>
 {{end}}
-<p class="pager">共 {{.Task.Total}} 条
-{{if gt .Task.Page 1}}<a href="{{.Task.ListHref .Task.Prev}}">上一页</a>{{end}}
-{{if .Task.HasNext}}<a href="{{.Task.ListHref .Task.Next}}">下一页</a>{{end}}
-</p>
-{{else}}<p>没有任务.</p>{{end}}
+</section>
+<aside class="work-detail">
+{{if .Task.HasTask}}
+<h2>{{.Task.Task.Title}}</h2>
+<p class="meta">{{.Task.Task.Kind}} · {{taskStatus .Task.Task.Status}}{{if eq .Task.Task.Priority "high"}} · 紧急{{end}}</p>
+<p>认领: {{if .Task.Task.ClaimedName}}{{.Task.Task.ClaimedName}}{{else}}还没有人接{{end}}</p>
+{{if .Task.Task.Contact}}<p>联系方式: {{.Task.Task.Contact}}</p>{{end}}
+{{if .Task.BodyHTML}}<div class="doc">{{.Task.BodyHTML}}</div>{{else if .Task.Task.Body}}<p>{{.Task.Task.Body}}</p>{{end}}
+<div class="tools">
+{{if not .Task.Task.ClaimedID}}
+<form method="post" action="/tasks/{{.Task.Task.ID}}/claim"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">认领</button></form>
+{{end}}
+{{if .Task.Task.ClaimedID}}
+<form method="post" action="/tasks/{{.Task.Task.ID}}/done"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">完成</button></form>
+<form method="post" action="/tasks/{{.Task.Task.ID}}/release"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">放弃</button></form>
+{{end}}
+</div>
+{{if .Task.Leader}}
+<form class="stack" method="post" action="/tasks/{{.Task.Task.ID}}/assign">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>指派
+<select name="person">
+{{range .Task.People}}<option value="{{.ID}}">{{.Label}}</option>{{end}}
+</select>
+</label>
+<button type="submit">指派</button>
+</form>
+{{end}}
+{{else}}
+<p class="empty">点一条任务, 在这里认领, 指派或完成.</p>
+{{end}}
+</aside>
+</div>
 {{end}}

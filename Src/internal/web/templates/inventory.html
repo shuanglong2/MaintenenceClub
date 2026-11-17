@@ -5,36 +5,72 @@
 <a href="/inventory/export.csv">导出</a>
 {{if .Inv.Manage}}<a class="go" href="/inventory/new">新建</a><a href="/inventory/import">导入</a><a href="/inventory/stocktakes">盘点</a>{{end}}
 </p>
-<form class="filters" method="get" action="/inventory">
-<label>关键词<input name="q" value="{{.Inv.Query}}"></label>
+<div class="work">
+<aside class="work-side">
+<form class="stack" method="get" action="/inventory">
 <label>类别
 <select name="category">
 <option value="">全部</option>
-<option value="器材" {{if eq .Inv.Category "器材"}}selected{{end}}>器材</option>
 <option value="工具" {{if eq .Inv.Category "工具"}}selected{{end}}>工具</option>
-<option value="消耗品" {{if eq .Inv.Category "消耗品"}}selected{{end}}>消耗品</option>
-<option value="元件" {{if eq .Inv.Category "元件"}}selected{{end}}>元件</option>
+<option value="设备" {{if eq .Inv.Category "设备"}}selected{{end}}>设备</option>
+<option value="仪器" {{if eq .Inv.Category "仪器"}}selected{{end}}>仪器</option>
+<option value="零件" {{if eq .Inv.Category "零件"}}selected{{end}}>零件</option>
+<option value="耗材" {{if eq .Inv.Category "耗材"}}selected{{end}}>耗材</option>
+<option value="日用品" {{if eq .Inv.Category "日用品"}}selected{{end}}>日用品</option>
+</select>
+</label>
+<label>用途
+<select name="purpose">
+<option value="">全部</option>
+<option value="维修" {{if eq .Inv.Purpose "维修"}}selected{{end}}>维修</option>
+<option value="科普" {{if eq .Inv.Purpose "科普"}}selected{{end}}>科普</option>
+<option value="竞赛" {{if eq .Inv.Purpose "竞赛"}}selected{{end}}>竞赛</option>
+</select>
+</label>
+<label>状态
+<select name="condition">
+<option value="">全部</option>
+<option value="ok" {{if eq .Inv.Condition "ok"}}selected{{end}}>正常</option>
+<option value="repair" {{if eq .Inv.Condition "repair"}}selected{{end}}>需维修</option>
+<option value="replace" {{if eq .Inv.Condition "replace"}}selected{{end}}>需更换</option>
 </select>
 </label>
 <button type="submit">筛选</button>
 </form>
+</aside>
+<section class="work-list">
+<form class="search-bar" method="get" action="/inventory">
+<input type="hidden" name="category" value="{{.Inv.Category}}">
+<input type="hidden" name="purpose" value="{{.Inv.Purpose}}">
+<input type="hidden" name="condition" value="{{.Inv.Condition}}">
+<label>搜索<input name="q" value="{{.Inv.Query}}" placeholder="名称或编号"></label>
+<button type="submit">搜索</button>
+</form>
 {{if .Inv.Notice}}<p class="hint">{{.Inv.Notice}}</p>{{end}}
-{{if not .Inv.Items}}<p class="empty">没有物品.</p>{{else}}
-<div class="table-scroll"><table>
-<thead><tr><th>编号</th><th>名称</th><th>类别</th><th>数量</th><th>位置</th></tr></thead>
-<tbody>
+{{if not .Inv.Items}}<p class="empty">没有物品.</p>{{end}}
 {{range .Inv.Items}}
-<tr>
-<td>{{.Code}}</td>
-<td><a href="/inventory/items/{{.ID}}">{{.Name}}</a></td>
-<td>{{.Category}}</td>
-<td>{{if .Tracked}}{{stateLabel .State}}{{else}}{{.Qty}} {{.Unit}}{{end}}</td>
-<td>{{.Location}}</td>
-</tr>
+<a class="card-link{{if and $.Inv.HasItem (eq .ID $.Inv.Item.ID)}} current{{end}}" href="/inventory?id={{.ID}}&category={{$.Inv.Category}}&purpose={{$.Inv.Purpose}}&condition={{$.Inv.Condition}}&q={{$.Inv.Query}}">
+<strong>{{.Name}}</strong>
+<span>{{.Category}}{{if .Purpose}} · {{.Purpose}}{{end}} · {{.ConditionText}}</span>
+<small>{{.Code}} · {{if .Tracked}}{{stateLabel .State}}{{else}}{{.Qty}} {{.Unit}}{{end}}{{if .Location}} · {{.Location}}{{end}}</small>
+</a>
 {{end}}
-</tbody>
-</table></div>
-{{end}}
+</section>
+<aside class="work-detail">
+{{if .Inv.HasItem}}
+<h2>{{.Inv.Item.Name}}</h2>
+<p class="meta">{{.Inv.Item.Code}} · {{.Inv.Item.Category}} · {{.Inv.Item.ConditionText}}</p>
+{{if .Inv.Item.Purpose}}<p>用途: {{.Inv.Item.Purpose}}</p>{{end}}
+{{if .Inv.Item.Model}}<p>型号: {{.Inv.Item.Model}}</p>{{end}}
+{{if .Inv.Item.Value}}<p>规格: {{.Inv.Item.Value}}</p>{{end}}
+<p>位置: {{if .Inv.Item.Location}}{{.Inv.Item.Location}}{{else}}未指定{{end}}</p>
+<p>数量: {{if .Inv.Item.Tracked}}{{stateLabel .Inv.Item.State}}{{else}}{{.Inv.Item.Qty}} {{.Inv.Item.Unit}}{{end}}</p>
+{{if not .Inv.Item.Received.IsZero}}<p>入库: {{.Inv.Item.Received.Format "2006-01-02"}}</p>{{end}}
+{{if not .Inv.Item.LastUsed.IsZero}}<p>上次使用: {{time8 .Inv.Item.LastUsed}}</p>{{end}}
+<p class="tools"><a href="/inventory/items/{{.Inv.Item.ID}}">打开详情</a></p>
+{{else}}<p class="empty">点一件物品查看存放和状态.</p>{{end}}
+</aside>
+</div>
 {{if .Inv.Manage}}
 <h2>新建位置</h2>
 <form class="stack" method="post" action="/inventory/locations">

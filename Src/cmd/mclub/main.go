@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/boards"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/finance"
@@ -108,6 +109,7 @@ func cmdServe() error {
 	inv := inventory.New(pool, store)
 	eventSvc := events.New(pool, store)
 	taskSvc := tasks.New(pool)
+	boardSvc := boards.New(pool)
 	logSvc := logs.New(pool, store, inv)
 	inventory.RegisterItemPanel(func(ctx context.Context, itemID int64) (inventory.ItemPanel, error) {
 		html, err := logSvc.ItemHistoryHTML(ctx, itemID)
@@ -129,6 +131,7 @@ func cmdServe() error {
 		Inventory:    inv,
 		Events:       eventSvc,
 		Tasks:        taskSvc,
+		Boards:       boardSvc,
 		Logs:         logSvc,
 		Finance:      finSvc,
 		WeekStart:    cfg.WeekStart,
@@ -188,6 +191,7 @@ func modules() []migrate.Module {
 		{Name: "inventory", FS: inventory.SQL},
 		{Name: "events", FS: events.SQL},
 		{Name: "tasks", FS: tasks.SQL},
+		{Name: "boards", FS: boards.SQL},
 		{Name: "logs", FS: logs.SQL},
 		{Name: "finance", FS: finance.SQL},
 	}

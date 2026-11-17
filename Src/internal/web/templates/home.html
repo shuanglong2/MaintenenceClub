@@ -5,7 +5,7 @@
 <p class="lead">你好, {{.User.Name}}.</p>
 </header>
 <form class="search-bar" method="get" action="/">
-<label>搜索<input name="q" value="{{.Find.Query}}" maxlength="40" placeholder="文档, 物品, 活动, 任务"></label>
+<label>搜索<input name="q" value="{{.Find.Query}}" maxlength="40" placeholder="文档, 物品, 日程, 任务"></label>
 <button type="submit">搜索</button>
 </form>
 {{if .Find.Query}}

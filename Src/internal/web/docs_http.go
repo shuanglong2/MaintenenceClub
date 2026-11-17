@@ -664,6 +664,15 @@ func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if !allowed && s.people != nil {
+		var n int
+		err = s.people.Pool().QueryRow(r.Context(), `SELECT count(*) FROM people.people WHERE avatar_id = $1`, id).Scan(&n)
+		if err != nil {
+			s.internal(w, r, err)
+			return
+		}
+		allowed = n > 0
+	}
 	if !allowed && s.finance != nil {
 		allowed, err = s.finance.CanSeeFile(r.Context(), finance.Actor{
 			ID: actor.ID, Name: actor.Name, Role: actor.Role, Finance: user.Session.User.Finance, Active: actor.Active, IP: actor.IP,

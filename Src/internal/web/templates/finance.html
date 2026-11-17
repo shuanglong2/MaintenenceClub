@@ -1,8 +1,16 @@
 {{define "finance-body"}}
 <h1>财务</h1>
-<div class="cards">
-<p class="card">手头 {{yuan .Fin.Cash}} 元</p>
-<p class="card">储蓄 {{yuan .Fin.Savings}} 元</p>
+<div class="ledger-top">
+<article>
+<p>手头</p>
+<strong>{{yuan .Fin.Cash}}</strong>
+<span>元</span>
+</article>
+<article>
+<p>储蓄</p>
+<strong>{{yuan .Fin.Savings}}</strong>
+<span>元</span>
+</article>
 </div>
 <p class="tools"><a href="/finance/stats">统计</a> <a href="/finance/export.csv">导出</a>{{if .Fin.CanWrite}} <a class="go" href="/finance/new">记一笔</a>{{end}}</p>
 <form class="filters" method="get" action="/finance">
@@ -23,11 +31,12 @@
 </form>
 {{if .Fin.Entries}}
 {{range .Fin.Entries}}
-<article{{if .Voided}} class="muted"{{end}}>
-<p class="entry-line"><a href="/finance/{{.ID}}">{{finKind .Kind}}</a> <strong>{{yuan .Cents}} 元</strong></p>
-<p class="meta">{{.DateText}} · {{.Category}} · {{.ActorName}}{{if .Voided}} · 已作废{{end}}</p>
-{{if .Note}}<p>{{.Note}}</p>{{end}}
-</article>
+<a class="ledger-row{{if .Voided}} muted{{end}}" href="/finance/{{.ID}}">
+<span>{{.DateText}}</span>
+<span>{{finKind .Kind}} · {{.Category}}</span>
+<strong class="amt-{{.Kind}}">{{yuan .Cents}}</strong>
+</a>
+{{if .Note}}<p class="meta">{{.Note}} · {{.ActorName}}{{if .Voided}} · 已作废{{end}}</p>{{end}}
 {{end}}
 <p class="pager">共 {{.Fin.Total}} 条
 {{if gt .Fin.Page 1}}<a href="{{.Fin.PageHref (add .Fin.Page -1)}}">上一页</a>{{end}}

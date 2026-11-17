@@ -69,6 +69,35 @@ func CheckPassword(ctx context.Context, hash, password string) (bool, error) {
 	return true, nil
 }
 
+// InitialPassword 生成 8 位初始密码, 同时含大写, 小写和数字.
+func InitialPassword() (string, error) {
+	upper := []byte("ABCDEFGHJKLMNPQRSTUVWXYZ")
+	lower := []byte("abcdefghijkmnopqrstuvwxyz")
+	digit := []byte("23456789")
+	all := append(append(append([]byte{}, upper...), lower...), digit...)
+	var raw [8]byte
+	if _, err := rand.Read(raw[:]); err != nil {
+		return "", err
+	}
+	out := []byte{
+		upper[int(raw[0])%len(upper)],
+		lower[int(raw[1])%len(lower)],
+		digit[int(raw[2])%len(digit)],
+	}
+	for i := 3; i < 8; i++ {
+		out = append(out, all[int(raw[i])%len(all)])
+	}
+	var mix [8]byte
+	if _, err := rand.Read(mix[:]); err != nil {
+		return "", err
+	}
+	for i := len(out) - 1; i > 0; i-- {
+		j := int(mix[i]) % (i + 1)
+		out[i], out[j] = out[j], out[i]
+	}
+	return string(out), nil
+}
+
 // RandomPassword 生成一次性初始密码.
 func RandomPassword() (string, error) {
 	var raw [passwordSize]byte

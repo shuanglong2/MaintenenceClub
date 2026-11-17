@@ -1,0 +1,96 @@
+{{define "gather-body"}}
+<header class="page-head">
+<h1>{{.Title}}</h1>
+</header>
+<div class="work">
+<aside class="work-side">
+<form class="stack" method="get" action="{{.Gather.Base}}">
+<label>类型
+<select name="kind">
+<option value="">全部</option>
+{{range .Gather.Kinds}}<option value="{{.}}" {{if eq . $.Gather.Kind}}selected{{end}}>{{.}}</option>{{end}}
+</select>
+</label>
+<label>状态
+<select name="status">
+<option value="">未归档</option>
+{{range .Gather.Statuses}}<option value="{{.}}" {{if eq . $.Gather.Status}}selected{{end}}>{{boardStatus .}}</option>{{end}}
+</select>
+</label>
+<label class="check"><input type="checkbox" name="done" value="1" {{if .Gather.ShowDone}}checked{{end}}> 显示已完成</label>
+<button type="submit">筛选</button>
+</form>
+{{if .Gather.Leader}}<p class="tools"><a class="go" href="{{.Gather.Base}}?new=1">新建</a></p>{{end}}
+</aside>
+<section class="work-list">
+<form class="search-bar" method="get" action="{{.Gather.Base}}">
+<input type="hidden" name="kind" value="{{.Gather.Kind}}">
+<input type="hidden" name="status" value="{{.Gather.Status}}">
+{{if .Gather.ShowDone}}<input type="hidden" name="done" value="1">{{end}}
+<label>搜索<input name="q" value="{{.Gather.Query}}" placeholder="标题"></label>
+<button type="submit">搜索</button>
+</form>
+{{if not .Gather.Items}}<p class="empty">没有符合的条目.</p>{{end}}
+{{range .Gather.Items}}
+<a class="card-link{{if and $.Gather.HasOpen (eq .ID $.Gather.Open.ID)}} current{{end}}" href="{{$.Gather.Base}}?id={{.ID}}{{if $.Gather.Kind}}&kind={{$.Gather.Kind}}{{end}}{{if $.Gather.Status}}&status={{$.Gather.Status}}{{end}}{{if $.Gather.ShowDone}}&done=1{{end}}{{if $.Gather.Query}}&q={{$.Gather.Query}}{{end}}">
+<strong>{{.Title}}</strong>
+<span>{{boardStatus .Status}} · {{.Kind}}</span>
+<small>{{if .Names}}{{.Names}}{{else}}还没有人参加{{end}} · {{.Headcount}} 人</small>
+</a>
+{{end}}
+</section>
+<aside class="work-detail">
+{{if .Gather.Creating}}
+<h2>新建</h2>
+<form class="stack" method="post" action="{{.Gather.Base}}">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>标题<input name="title" required></label>
+<label>类型<select name="kind">{{range .Gather.Kinds}}<option value="{{.}}">{{.}}</option>{{end}}</select></label>
+<label>简介<textarea name="summary" rows="4"></textarea></label>
+<label>联系方式<input name="contact"></label>
+<label>地点<input name="place"></label>
+<label>开始日期<input type="date" name="start_date"></label>
+<label>开始时间<input type="time" name="start_clock"></label>
+<label>结束日期<input type="date" name="end_date"></label>
+<label>结束时间<input type="time" name="end_clock"></label>
+<button type="submit">创建</button>
+</form>
+{{else if .Gather.HasOpen}}
+<h2>{{.Gather.Open.Title}}</h2>
+<p class="meta">{{.Gather.Open.Kind}} · {{boardStatus .Gather.Open.Status}}</p>
+{{if .Gather.Open.Place}}<p>地点: {{.Gather.Open.Place}}</p>{{end}}
+{{if .Gather.Open.Contact}}<p>联系方式: {{.Gather.Open.Contact}}</p>{{end}}
+<p>参加: {{if .Gather.Open.Names}}{{.Gather.Open.Names}}{{else}}还没有人{{end}}</p>
+{{if .Gather.Open.Summary}}<p>{{.Gather.Open.Summary}}</p>{{end}}
+<div class="tools">
+{{if and (eq .Gather.Open.Status "open") (not .Gather.Joined)}}
+<form method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/join"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">参加</button></form>
+{{end}}
+{{if .Gather.Joined}}
+<form method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/leave"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">退出</button></form>
+{{end}}
+</div>
+{{if .Gather.Leader}}
+<form class="stack" method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/status">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>状态
+<select name="status">
+{{range .Gather.Statuses}}<option value="{{.}}" {{if eq . $.Gather.Open.Status}}selected{{end}}>{{boardStatus .}}</option>{{end}}
+</select>
+</label>
+<button type="submit">保存状态</button>
+</form>
+<form class="stack" method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/assign">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>指派参加
+<select name="person">{{range .Gather.People}}<option value="{{.ID}}">{{.Name}}</option>{{end}}</select>
+</label>
+<button type="submit">指派</button>
+</form>
+{{end}}
+{{else}}
+<p class="empty">点一张卡片查看详情.</p>
+{{end}}
+</aside>
+</div>
+{{end}}

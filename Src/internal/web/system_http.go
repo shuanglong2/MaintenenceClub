@@ -38,6 +38,9 @@ type systemView struct {
 	NetRate    string
 	NetTotal   string
 	Warn       string
+	CPUPct     int
+	MemPct     int
+	DiskPct    int
 }
 
 type hostView struct {
@@ -45,6 +48,8 @@ type hostView struct {
 	Mem      string
 	NetRate  string
 	NetTotal string
+	CPUPct   int
+	MemPct   int
 }
 
 type backupStatus struct {
@@ -52,6 +57,19 @@ type backupStatus struct {
 	OK   bool
 	Text string
 	Note string
+}
+
+func (s *server) systemLive(w http.ResponseWriter, r *http.Request) {
+	user, ok := s.requireUser(w, r)
+	if !ok {
+		return
+	}
+	if !people.Can(user.Session.User, people.ActSystemManage, people.Resource{}) {
+		s.notFound(w, r)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	s.renderPart(w, r, "system-live", page{Sys: s.collectStatus(r.Context())})
 }
 
 func (s *server) systemStatus(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +93,7 @@ func (s *server) collectStatus(ctx context.Context) systemView {
 	view := systemView{
 		Version: buildinfo.Version, Commit: buildinfo.Commit, Built: buildinfo.Built,
 		Memory: processMemory(), CPU: host.CPU, Mem: host.Mem, NetRate: host.NetRate, NetTotal: host.NetTotal,
+		CPUPct: host.CPUPct, MemPct: host.MemPct,
 	}
 	root := "/srv/maintclub"
 	if store := s.uploads(); store != nil && store.Root() != "" {
@@ -98,6 +117,9 @@ func (s *server) collectStatus(ctx context.Context) systemView {
 		view.DiskFree = formatBytes(free)
 		view.DiskTotal = formatBytes(total)
 		view.DiskLow = diskLow(free, total)
+		if total > 0 && total >= free {
+			view.DiskPct = int((total - free) * 100 / total)
+		}
 		if total >= free {
 			view.DiskUsed = formatBytes(total - free)
 		} else {

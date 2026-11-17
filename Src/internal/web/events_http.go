@@ -8,8 +8,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/boards"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/tasks"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/files"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/shared/mdown"
 )
@@ -65,9 +67,10 @@ func (s *server) eventsMonth(w http.ResponseWriter, r *http.Request) {
 		s.showEventErr(w, r, err)
 		return
 	}
+	days = s.overlaySchedule(r, actor, days)
 	cursor := time.Date(year, month, 1, 0, 0, 0, 0, events.CST)
 	s.render(w, r, http.StatusOK, page{
-		Title: "活动", Body: "events-body",
+		Title: "日程", Body: "events-body",
 		Evt: eventView{
 			Days: days, Heads: events.Heads(s.weekStart),
 			Prev: cursor.AddDate(0, -1, 0).Format("2006-01"), Next: cursor.AddDate(0, 1, 0).Format("2006-01"),
@@ -92,7 +95,7 @@ func (s *server) eventsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, page{
-		Title: "活动列表", Body: "events-list-body",
+		Title: "日程列表", Body: "events-list-body",
 		Evt: eventView{Upcoming: upcoming, Past: past, Manage: eventsEditable(actor)},
 	})
 }
@@ -110,7 +113,7 @@ func (s *server) eventsNew(w http.ResponseWriter, r *http.Request) {
 	now := time.Now().In(events.CST)
 	start := time.Date(now.Year(), now.Month(), now.Day(), 9, 0, 0, 0, events.CST)
 	s.render(w, r, http.StatusOK, page{
-		Title: "新建活动", Body: "event-form-body",
+		Title: "新建日程", Body: "event-form-body",
 		Evt: eventView{
 			Event:  events.Event{Kind: "例会", Starts: start, Ends: start.Add(time.Hour), OwnerID: actor.ID},
 			People: people, Kinds: events.Kinds(), Manage: true,
@@ -393,7 +396,44 @@ func readEventDraft(r *http.Request) (events.Draft, error) {
 	return events.Draft{
 		Title: r.FormValue("title"), Kind: r.FormValue("kind"), Place: r.FormValue("place"), Body: r.FormValue("body"),
 		AllDay: allDay, Starts: start, Ends: end, OwnerID: owner, Status: r.FormValue("status"), SignupUntil: signup,
+		MembersHidden: r.FormValue("members") != "1",
 	}, nil
+}
+
+func (s *server) overlaySchedule(r *http.Request, actor events.Actor, days []events.Day) []events.Day {
+	if len(days) == 0 {
+		return days
+	}
+	from := days[0].Date
+	to := days[len(days)-1].Date.AddDate(0, 0, 1)
+	var extra []events.Event
+	if s.tasks != nil {
+		spots, err := s.tasks.Spots(r.Context(), tasks.Actor{ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP}, from, to)
+		if err == nil {
+			for _, spot := range spots {
+				extra = append(extra, events.Event{
+					Title: spot.Title, Kind: "任务", Href: "/tasks?id=" + strconv.FormatInt(spot.ID, 10),
+					Starts: spot.At, Ends: spot.At.Add(time.Hour),
+				})
+			}
+		}
+	}
+	if s.boards != nil {
+		spots, err := s.boards.Spots(r.Context(), boards.Actor{ID: actor.ID, Name: actor.Name, Role: actor.Role, Active: actor.Active, IP: actor.IP}, from, to)
+		if err == nil {
+			for _, spot := range spots {
+				kind := "活动"
+				if spot.Board == boards.Competition {
+					kind = "竞赛"
+				}
+				extra = append(extra, events.Event{
+					Title: spot.Title, Kind: kind, Href: boards.BasePath(spot.Board) + "?id=" + strconv.FormatInt(spot.ID, 10),
+					Starts: spot.Start, Ends: spot.End,
+				})
+			}
+		}
+	}
+	return events.Place(days, extra)
 }
 
 func (s *server) showEventErr(w http.ResponseWriter, r *http.Request, err error) {

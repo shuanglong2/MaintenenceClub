@@ -1,5 +1,5 @@
 {{define "events-list-body"}}
-<h1>活动</h1>
+<h1>日程</h1>
 <p class="tools"><a href="/events">月历</a> {{if .Evt.Manage}}<a class="go" href="/events/new">新建</a>{{end}}</p>
 <h2>即将开始</h2>
 {{if .Evt.Upcoming}}<ul>{{range .Evt.Upcoming}}<li><a href="/events/{{.ID}}">{{.Title}}</a> {{whenLabel .}} {{.Place}} {{statusLabel .Status}}</li>{{end}}</ul>{{else}}<p>没有即将开始的活动.</p>{{end}}

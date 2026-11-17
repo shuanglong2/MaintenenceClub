@@ -911,6 +911,146 @@ details.danger summary {
   background: transparent;
 }
 
+main:has(.work) {
+  max-width: 92rem;
+}
+
+.work {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr) minmax(16rem, 22rem);
+  gap: 1rem;
+  align-items: start;
+}
+
+.work-side,
+.work-detail {
+  background: #fffdf9;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+}
+
+.work-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.card-link {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.75rem 0.85rem;
+  text-decoration: none;
+  color: inherit;
+  background: #fffdf9;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.8rem;
+}
+
+.card-link.current {
+  border-color: #2f6f4e;
+  box-shadow: inset 3px 0 0 #2f6f4e;
+}
+
+.card-link span,
+.card-link small {
+  color: #6d655c;
+}
+
+.cal-day a[data-kind="任务"] { background: #d9ebe3; }
+.cal-day a[data-kind="活动"] { background: #f6e4d4; }
+.cal-day a[data-kind="竞赛"] { background: #efe3f6; }
+.cal-day a[data-kind="例会"] { background: #e4eaf6; }
+
+.meters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.meters article,
+.ledger-top article {
+  background: #fffdf9;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.9rem;
+  padding: 0.9rem;
+}
+
+.meter {
+  height: 0.55rem;
+  background: #efe6da;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.meter i {
+  display: block;
+  height: 100%;
+  background: #2f6f4e;
+}
+
+.meter-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0.2rem 0 0.45rem;
+}
+
+.status-extra {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.ledger-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.ledger-top strong {
+  font-size: 1.8rem;
+}
+
+.ledger-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.65rem 0.2rem;
+  border-bottom: 1px solid #efe6da;
+  text-decoration: none;
+  color: inherit;
+}
+
+.amt-in, .amt-draw { color: #2f6f4e; }
+.amt-out, .amt-save { color: #8f2d2d; }
+
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem;
+}
+
+.person-card {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.85rem;
+  background: #fffdf9;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.9rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.avatar,
+.person-card img {
+  width: 3rem;
+  height: 3rem;
+  object-fit: cover;
+  border-radius: 999px;
+}
+
 @media (max-width: 720px) {
   .cal {
     display: none;
@@ -922,7 +1062,11 @@ details.danger summary {
 
   .board,
   .editor,
-  .docs-app {
+  .docs-app,
+  .work,
+  .meters,
+  .status-extra,
+  .ledger-top {
     grid-template-columns: 1fr;
   }
 

@@ -14,13 +14,15 @@
 <nav>
 <a href="/" {{if navOn .Path "/"}}aria-current="page"{{end}}>主页</a>
 <a href="/docs" {{if navOn .Path "/docs"}}aria-current="page"{{end}}>文档</a>
-<a href="/inventory" {{if navOn .Path "/inventory"}}aria-current="page"{{end}}>库存</a>
-<a href="/events" {{if navOn .Path "/events"}}aria-current="page"{{end}}>活动</a>
+<a href="/events" {{if navOn .Path "/events"}}aria-current="page"{{end}}>日程</a>
 <a href="/tasks" {{if navOn .Path "/tasks"}}aria-current="page"{{end}}>任务</a>
+<a href="/activities" {{if navOn .Path "/activities"}}aria-current="page"{{end}}>活动</a>
+<a href="/competitions" {{if navOn .Path "/competitions"}}aria-current="page"{{end}}>竞赛</a>
+<a href="/inventory" {{if navOn .Path "/inventory"}}aria-current="page"{{end}}>库存</a>
 <a href="/logs" {{if navOn .Path "/logs"}}aria-current="page"{{end}}>日志</a>
-{{if .Finance}}<a href="/finance" {{if navOn .Path "/finance"}}aria-current="page"{{end}}>财务</a>{{end}}
-<a href="/people" {{if navOn .Path "/people"}}aria-current="page"{{end}}>人员</a>
 {{if .ShowAudit}}<a href="/audit" {{if navOn .Path "/audit"}}aria-current="page"{{end}}>审计</a>{{end}}
+{{if .Finance}}<a href="/finance" {{if navOn .Path "/finance"}}aria-current="page"{{end}}>财务</a>{{end}}
+{{if .ShowManage}}<a href="/people" {{if navOn .Path "/people"}}aria-current="page"{{end}}>人员</a>{{end}}
 {{if .ShowManage}}<a href="/system" {{if navOn .Path "/system"}}aria-current="page"{{end}}>状态</a>{{end}}
 </nav>
 {{end}}

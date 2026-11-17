@@ -14,6 +14,7 @@
 {{range .Evt.People}}<option value="{{.ID}}" {{if eq .ID $.Evt.Event.OwnerID}}selected{{end}}>{{.Name}}</option>{{end}}
 </select>
 </label>
+<label class="check"><input type="checkbox" name="members" value="1" {{if .Evt.Event.MemberVisible}}checked{{end}}> 组员可见</label>
 <label class="check"><input type="checkbox" name="all_day" value="1" {{if .Evt.Event.AllDay}}checked{{end}}> 全天</label>
 <label>开始日期<input type="date" name="start_date" value="{{.Evt.Event.StartDate}}" required></label>
 <label>开始时间<input type="time" name="start_clock" value="{{.Evt.Event.StartClock}}"></label>

@@ -26,11 +26,14 @@ func (s *Service) HomeBoardHTML(ctx context.Context, actor Actor) (template.HTML
 		return "", ErrForbidden
 	}
 	rows, err := s.pool.Query(ctx, `
-SELECT t.id, t.title, t.status, t.due_on, t.owner_name
+SELECT t.id, t.title, t.status, t.due_on,
+       CASE WHEN COALESCE(t.claimed_name, '') = '' THEN '未接取' ELSE t.claimed_name END
 FROM tasks.tasks t
 WHERE t.status IN ('todo', 'doing')
-ORDER BY t.due_on NULLS LAST, t.id
-LIMIT 8`)
+  AND ($1::boolean OR t.claimed_by IS NULL OR t.claimed_by = $2)
+ORDER BY CASE WHEN t.claimed_by = $2 THEN 0 WHEN t.priority = 'high' THEN 1 WHEN t.claimed_by IS NULL THEN 2 ELSE 3 END,
+         t.created_at, t.id
+LIMIT 8`, actor.leader(), actor.ID)
 	if err != nil {
 		return "", err
 	}

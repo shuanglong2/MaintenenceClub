@@ -105,7 +105,7 @@ func TestTaskFlow(t *testing.T) {
 	if err := pool.QueryRow(ctx, `SELECT summary FROM audit.events WHERE action = 'tasks.status' AND entity_id = $1 ORDER BY id DESC LIMIT 1`, assigned.ID).Scan(&summary); err != nil {
 		t.Fatal(err)
 	}
-	if summary != "把状态从 待办 改成 进行中" {
+	if summary != "把状态从 待处理 改成 进行中" {
 		t.Fatal(summary)
 	}
 	if err := svc.Comment(ctx, memberActor, assigned.ID, "明天开始"); err != nil {

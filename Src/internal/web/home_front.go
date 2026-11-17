@@ -9,6 +9,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/boards"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
@@ -71,7 +72,16 @@ func (s *server) front(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if s.events != nil {
+	if s.boards != nil {
+		html, err := s.boards.HomeHTML(r.Context(), boards.Actor{
+			ID: user.Session.User.ID, Name: user.Session.Name, Role: user.Session.User.Role, Active: user.Session.User.Active,
+		})
+		if err != nil {
+			slog.Error("读取进行中的活动", "err", err)
+		} else {
+			home.Events = html
+		}
+	} else if s.events != nil {
 		html, err := s.events.HomeOngoingHTML(r.Context(), events.Actor{
 			ID: user.Session.User.ID, Role: user.Session.User.Role, Active: user.Session.User.Active,
 		})
