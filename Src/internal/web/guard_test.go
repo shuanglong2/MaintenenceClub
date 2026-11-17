@@ -85,6 +85,16 @@ func TestMemberBlockedFromManagement(t *testing.T) {
 	}, people.Input{Name: "组员甲", Login: "m7member", Role: "组员", Password: "member-pass"}); err != nil {
 		t.Fatal(err)
 	}
+	if err := svc.ChangePassword(ctx, leader.User.ID, leader.Token, "leader-pass", "leader-pass"); err != nil {
+		t.Fatal(err)
+	}
+	memberSession, err := svc.Login(ctx, "m7member", "member-pass", "127.0.0.1", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ChangePassword(ctx, memberSession.User.ID, memberSession.Token, "member-pass", "member-pass"); err != nil {
+		t.Fatal(err)
+	}
 	store := files.New(pool, t.TempDir(), 6<<30)
 	assets, err := Open("")
 	if err != nil {
