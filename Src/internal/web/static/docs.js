@@ -336,10 +336,32 @@
     });
   }
 
+  function focusEditor() {
+    var nodes = document.querySelectorAll("#doc-editor [contenteditable='true']");
+    if (nodes.length) nodes[nodes.length - 1].focus();
+  }
+
+  function put(markdown) {
+    if (!ready) return;
+    if (mode === "sv") {
+      editor.updateValue(markdown);
+      return;
+    }
+    focusEditor();
+    if (editor.getSelection()) document.execCommand("delete", false);
+    editor.insertValue(markdown, true);
+  }
+
   function wrap(left, right, fallback) {
     if (!ready) return;
     var sel = editor.getSelection() || fallback;
-    editor.updateValue(left + sel + right);
+    if (mode === "sv") {
+      editor.updateValue(left + sel + right);
+      return;
+    }
+    focusEditor();
+    if (editor.getSelection()) document.execCommand("delete", false);
+    editor.insertValue(left + sel + right, true);
   }
 
   document.querySelectorAll("[data-mode-set]").forEach(function (button) {
@@ -359,8 +381,8 @@
     block.addEventListener("change", function () {
       if (!ready || block.value === "") return;
       var text = (editor.getSelection() || "标题").replace(/^#{1,6}\s*/, "");
-      if (block.value === "0") editor.updateValue(text);
-      else editor.updateValue(new Array(Number(block.value) + 1).join("#") + " " + text);
+      if (block.value === "0") put(text);
+      else put(new Array(Number(block.value) + 1).join("#") + " " + text);
       block.value = "";
     });
   }
@@ -373,10 +395,10 @@
       else if (cmd === "math") {
         if (!ready) return;
         var sel = editor.getSelection();
-        if (sel) editor.updateValue("$" + sel + "$");
-        else editor.insertValue("\n$$\nF = ma\n$$\n");
+        if (sel) put("$" + sel + "$");
+        else put("\n$$\nF = ma\n$$\n");
       } else if (cmd === "table") {
-        if (ready) editor.insertValue("\n| 列 1 | 列 2 |\n| --- | --- |\n|  |  |\n");
+        put("\n| 列 1 | 列 2 |\n| --- | --- |\n|  |  |\n");
       } else if (cmd === "image") {
         var picker = document.getElementById("doc-image");
         if (picker) picker.click();
