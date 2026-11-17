@@ -63,7 +63,7 @@ func (s *server) logsList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	filter := logs.Filter{
-		Mine:   r.URL.Query().Get("mine") == "1", Kind: r.URL.Query().Get("kind"),
+		Mine: r.URL.Query().Get("mine") == "1", Kind: r.URL.Query().Get("kind"),
 		Status: r.URL.Query().Get("status"), Query: r.URL.Query().Get("q"), Limit: 30,
 	}
 	pageNo := 1
@@ -80,9 +80,9 @@ func (s *server) logsList(w http.ResponseWriter, r *http.Request) {
 	}
 	s.render(w, r, http.StatusOK, page{
 		Title: "日志", Body: "logs-body",
-		Log:   logView{
+		Log: logView{
 			Entries: items, Kind: filter.Kind, Status: filter.Status, Mine: filter.Mine, Query: filter.Query,
-			Page:    pageNo, HasNext: filter.Offset+len(items) < total, Total: total,
+			Page: pageNo, HasNext: filter.Offset+len(items) < total, Total: total,
 		},
 	})
 }
@@ -137,7 +137,7 @@ func (s *server) logsShow(w http.ResponseWriter, r *http.Request) {
 	}
 	s.render(w, r, http.StatusOK, page{
 		Title: logs.KindLabel(entry.Kind), Body: "log-body",
-		Log:   logView{Entry: entry, BodyHTML: mdown.Render(entry.Body), CanEdit: logCanEdit(actor, entry)},
+		Log: logView{Entry: entry, BodyHTML: mdown.Render(entry.Body), CanEdit: logCanEdit(actor, entry)},
 	})
 }
 
@@ -264,7 +264,7 @@ func (s *server) logUser(w http.ResponseWriter, r *http.Request) (logs.Actor, bo
 		return logs.Actor{}, false
 	}
 	return logs.Actor{
-		ID:     user.Session.User.ID, Name: user.Session.Name, Role: user.Session.User.Role,
+		ID: user.Session.User.ID, Name: user.Session.Name, Role: user.Session.User.Role,
 		Active: user.Session.User.Active, IP: user.IP,
 	}, true
 }
@@ -284,7 +284,7 @@ func readLogDraft(r *http.Request) logs.Draft {
 	}
 	itemID, _ := strconv.ParseInt(r.FormValue("item"), 10, 64)
 	draft := logs.Draft{
-		Kind:   r.FormValue("kind"), Date: day, Body: r.FormValue("body"), Minutes: minutes,
+		Kind: r.FormValue("kind"), Date: day, Body: r.FormValue("body"), Minutes: minutes,
 		Target: r.FormValue("target"), ItemID: itemID, Symptom: r.FormValue("symptom"),
 		Action: r.FormValue("action"), Result: r.FormValue("result"), Status: r.FormValue("status"),
 		Source: r.FormValue("source"), Contact: r.FormValue("contact"),

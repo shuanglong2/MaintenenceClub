@@ -68,7 +68,7 @@ func TestLogFlow(t *testing.T) {
 	svc := New(pool, store, inv)
 	day := dateOnly(now)
 	repair, err := svc.Create(ctx, memberActor, Draft{
-		Kind:   kindRepair, Date: &day, Symptom: "换焊锡", Action: "重焊", Target: "computer",
+		Kind: kindRepair, Date: &day, Symptom: "换焊锡", Action: "重焊", Target: "computer",
 		Source: "高一3班", Contact: "13800001111", Parts: []Part{{ItemID: item.ID, Qty: 2}},
 	})
 	if err != nil || repair.Contact != "13800001111" || len(repair.Parts) != 1 {

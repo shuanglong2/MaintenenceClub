@@ -302,7 +302,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 func writeStatusAudit(ctx context.Context, tx pgx.Tx, actor Actor, id int64, from, to string) error {
 	return audit.Write(ctx, tx, audit.Event{
 		ActorID: actor.ID, ActorName: actor.Name, IP: actor.IP, Action: "logs.status",
-		Entity:  "log", EntityID: &id,
+		Entity: "log", EntityID: &id,
 		Summary: "把状态从 " + StatusLabel(from) + " 改成 " + StatusLabel(to),
 		Detail:  map[string]string{"from": from, "to": to},
 	})
