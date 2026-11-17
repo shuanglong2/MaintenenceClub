@@ -15,11 +15,6 @@ type Widget struct {
 	Render func(context.Context, people.User) (template.HTML, error)
 }
 
-type widgetView struct {
-	Title string
-	HTML  template.HTML
-}
-
 var (
 	widgetMu sync.Mutex
 	widgets  []Widget
@@ -30,25 +25,4 @@ func RegisterWidget(widget Widget) {
 	widgetMu.Lock()
 	defer widgetMu.Unlock()
 	widgets = append(widgets, widget)
-}
-
-func renderWidgets(ctx context.Context, user people.User) []widgetView {
-	widgetMu.Lock()
-	current := append([]Widget(nil), widgets...)
-	widgetMu.Unlock()
-	var out []widgetView
-	for _, widget := range current {
-		if widget.Allow != nil && !widget.Allow(user) {
-			continue
-		}
-		if widget.Render == nil {
-			continue
-		}
-		html, err := widget.Render(ctx, user)
-		if err != nil {
-			continue
-		}
-		out = append(out, widgetView{Title: widget.Title, HTML: html})
-	}
-	return out
 }

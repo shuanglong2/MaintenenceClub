@@ -96,7 +96,6 @@ type page struct {
 	Editing    bool
 	Audit      []auditRow
 	Filter     auditFilter
-	Widgets    []widgetView
 	Offset     int
 	Prev       int
 	HasNext    bool
