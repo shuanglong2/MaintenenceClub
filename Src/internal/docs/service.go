@@ -44,6 +44,8 @@ type Page struct {
 	Voided     bool
 	VoidReason string
 	Tags       []string
+	Tone       string
+	Mark       string
 }
 
 // PageLink 是目录里的一篇文档.
@@ -51,6 +53,8 @@ type PageLink struct {
 	ID         int64
 	Title      string
 	Visibility string
+	Tone       string
+	Mark       string
 }
 
 // FolderNode 是目录树的一层.
@@ -162,7 +166,7 @@ func (s *Service) Tree(ctx context.Context, actor Actor) ([]FolderNode, []PageLi
 	pageByFolder := map[int64][]PageLink{}
 	var loose []PageLink
 	for _, page := range pages {
-		link := PageLink{ID: page.ID, Title: page.Title, Visibility: page.Visibility}
+		link := PageLink{ID: page.ID, Title: page.Title, Visibility: page.Visibility, Tone: page.Tone, Mark: page.Mark}
 		if page.FolderID == 0 {
 			loose = append(loose, link)
 			continue
@@ -617,6 +621,153 @@ UPDATE docs.folders SET name = $2, parent_id = $3, tone = $4, mark = $5 WHERE id
 	return tx.Commit(ctx)
 }
 
+// DeleteFolder 删除空目录.
+func (s *Service) DeleteFolder(ctx context.Context, actor Actor, id int64) error {
+	if !people.Can(actor.user(), people.ActDocsEdit, people.Resource{}) {
+		return ErrForbidden
+	}
+	if id < 1 {
+		return ErrBadInput
+	}
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	var kids, live int
+	err = tx.QueryRow(ctx, `
+SELECT (SELECT count(*) FROM docs.folders WHERE parent_id = $1),
+       (SELECT count(*) FROM docs.pages WHERE folder_id = $1 AND voided_at IS NULL)`, id).Scan(&kids, &live)
+	if err != nil {
+		return err
+	}
+	if kids > 0 || live > 0 {
+		return ErrNotEmpty
+	}
+	if _, err = tx.Exec(ctx, `UPDATE docs.pages SET folder_id = NULL WHERE folder_id = $1`, id); err != nil {
+		return err
+	}
+	tag, err := tx.Exec(ctx, `DELETE FROM docs.folders WHERE id = $1`, id)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return tx.Commit(ctx)
+}
+
+// Copy 复制一篇文档, 标题加上副本.
+func (s *Service) Copy(ctx context.Context, actor Actor, id int64) (Page, error) {
+	page, err := s.Get(ctx, actor, id)
+	if err != nil {
+		return Page{}, err
+	}
+	title := page.Title + " 副本"
+	if utf8.RuneCountInString(title) > 80 {
+		runes := []rune(page.Title)
+		if len(runes) > 76 {
+			runes = runes[:76]
+		}
+		title = string(runes) + " 副本"
+	}
+	out, err := s.Save(ctx, actor, Draft{
+		FolderID:   page.FolderID,
+		Title:      title,
+		Body:       page.Body,
+		Visibility: page.Visibility,
+		Tags:       strings.Join(page.Tags, ", "),
+	})
+	if err != nil {
+		return Page{}, err
+	}
+	if out.Conflict != nil {
+		return Page{}, ErrBadInput
+	}
+	if err := s.MarkPage(ctx, actor, out.Page.ID, page.Tone, page.Mark); err != nil {
+		return Page{}, err
+	}
+	out.Page.Tone = folderTone(page.Tone)
+	out.Page.Mark = pageMark(page.Mark)
+	return out.Page, nil
+}
+
+// MovePage 把文档放到另一个目录.
+func (s *Service) MovePage(ctx context.Context, actor Actor, id, folder int64) error {
+	page, err := s.Get(ctx, actor, id)
+	if err != nil {
+		return err
+	}
+	out, err := s.Save(ctx, actor, Draft{
+		ID:         page.ID,
+		Version:    page.Version,
+		FolderID:   folder,
+		Title:      page.Title,
+		Body:       page.Body,
+		Visibility: page.Visibility,
+		Tags:       strings.Join(page.Tags, ", "),
+	})
+	if err != nil {
+		return err
+	}
+	if out.Conflict != nil {
+		return ErrBadInput
+	}
+	return nil
+}
+
+// RenamePage 只改标题.
+func (s *Service) RenamePage(ctx context.Context, actor Actor, id int64, title string) error {
+	page, err := s.Get(ctx, actor, id)
+	if err != nil {
+		return err
+	}
+	out, err := s.Save(ctx, actor, Draft{
+		ID:         page.ID,
+		Version:    page.Version,
+		FolderID:   page.FolderID,
+		Title:      title,
+		Body:       page.Body,
+		Visibility: page.Visibility,
+		Tags:       strings.Join(page.Tags, ", "),
+	})
+	if err != nil {
+		return err
+	}
+	if out.Conflict != nil {
+		return ErrBadInput
+	}
+	return nil
+}
+
+// MarkPage 改文档在目录里的颜色和图示.
+func (s *Service) MarkPage(ctx context.Context, actor Actor, id int64, tone, mark string) error {
+	page, err := s.Get(ctx, actor, id)
+	if err != nil {
+		return err
+	}
+	if page.Voided {
+		return ErrBadInput
+	}
+	tag, err := s.pool.Exec(ctx, `UPDATE docs.pages SET tone = $2, mark = $3 WHERE id = $1 AND voided_at IS NULL`, id, folderTone(tone), pageMark(mark))
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func pageMark(value string) string {
+	switch value {
+	case "book", "wrench", "flask", "chip", "folder":
+		return value
+	default:
+		return "note"
+	}
+}
+
 func (s *Service) setVoid(ctx context.Context, actor Actor, id int64, reason string, void bool) error {
 	if !people.Can(actor.user(), people.ActDocsEdit, people.Resource{}) {
 		return ErrForbidden
@@ -737,12 +888,12 @@ func loadTx(ctx context.Context, tx pgx.Tx, id int64) (Page, error) {
 }
 
 const pageSelect = `
-SELECT id, coalesce(folder_id, 0), title, body, visibility, version, updated_at, voided_at IS NOT NULL, void_reason
+SELECT id, coalesce(folder_id, 0), title, body, visibility, version, updated_at, voided_at IS NOT NULL, void_reason, tone, mark
 FROM docs.pages`
 
 func loadRow(row pgx.Row) (Page, error) {
 	var page Page
-	err := row.Scan(&page.ID, &page.FolderID, &page.Title, &page.Body, &page.Visibility, &page.Version, &page.Updated, &page.Voided, &page.VoidReason)
+	err := row.Scan(&page.ID, &page.FolderID, &page.Title, &page.Body, &page.Visibility, &page.Version, &page.Updated, &page.Voided, &page.VoidReason, &page.Tone, &page.Mark)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Page{}, ErrNotFound
 	}
@@ -789,7 +940,7 @@ FROM docs.folders ORDER BY sort_order, id`)
 
 func (s *Service) visiblePages(ctx context.Context, actor Actor, voided bool) ([]Page, error) {
 	rows, err := s.pool.Query(ctx, `
-SELECT id, coalesce(folder_id, 0), title, ''::text, visibility, version, updated_at, voided_at IS NOT NULL, void_reason
+SELECT id, coalesce(folder_id, 0), title, ''::text, visibility, version, updated_at, voided_at IS NOT NULL, void_reason, tone, mark
 FROM docs.pages
 WHERE voided_at IS NULL AND ($1 OR visibility = 'all')
 ORDER BY title, id`, management(actor))
@@ -800,7 +951,7 @@ ORDER BY title, id`, management(actor))
 	var out []Page
 	for rows.Next() {
 		var page Page
-		if err := rows.Scan(&page.ID, &page.FolderID, &page.Title, &page.Body, &page.Visibility, &page.Version, &page.Updated, &page.Voided, &page.VoidReason); err != nil {
+		if err := rows.Scan(&page.ID, &page.FolderID, &page.Title, &page.Body, &page.Visibility, &page.Version, &page.Updated, &page.Voided, &page.VoidReason, &page.Tone, &page.Mark); err != nil {
 			return nil, err
 		}
 		out = append(out, page)

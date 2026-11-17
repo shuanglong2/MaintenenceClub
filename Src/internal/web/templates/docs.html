@@ -3,85 +3,92 @@
 {{template "doc-side" .}}
 <div class="doc-main">
 <h1>文档</h1>
-<p class="hint">左边选择一篇阅览. 编辑时右侧会编译 Markdown, 公式用 $ 或 $$ .</p>
-{{if and (not .Doc.Tree) (not .Doc.Loose)}}<p class="empty">还没有文档.</p>{{end}}
+<p class="empty">从左边打开一篇, 或右键新建.</p>
 {{if .Doc.Voided}}
-<h2>已作废</h2>
+<details>
+<summary>已作废</summary>
 <ul>
 {{range .Doc.Voided}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>
 <form method="post" action="/docs/p/{{.ID}}/unvoid"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit">恢复</button></form></li>{{end}}
 </ul>
+</details>
 {{end}}
 </div>
 </div>
+<script src="{{static "docs.js"}}"></script>
 {{end}}
 
 {{define "doc-side"}}
-<aside class="doc-side">
-<p class="tools"><a class="go" href="/docs/new">新建</a><a href="/docs/search">搜索</a><a href="/docs/export">导出</a></p>
-<ul class="doc-tree">
-{{range .Doc.Loose}}<li><a class="page" href="/docs/p/{{.ID}}" {{if eq .ID $.Doc.Page.ID}}aria-current="page"{{end}}>{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
+<aside class="doc-side" data-folder="{{.Doc.Page.FolderID}}">
+<input type="hidden" id="doc-csrf" value="{{.CSRF}}">
+<div class="tree-actions">
+<button type="button" id="tree-new-doc">新建文档</button>
+<button type="button" id="tree-new-folder">新建文件夹</button>
+<a href="/docs/search">搜索</a>
+<a href="/docs/export">导出</a>
+</div>
+<ul class="doc-tree" id="doc-tree">
+{{range .Doc.Loose}}<li><a class="row tone-{{if .Tone}}{{.Tone}}{{else}}ink{{end}}" href="/docs/p/{{.ID}}" data-kind="page" data-id="{{.ID}}" data-name="{{.Title}}" data-folder="0" data-tone="{{if .Tone}}{{.Tone}}{{else}}ink{{end}}" data-mark="{{if .Mark}}{{.Mark}}{{else}}note{{end}}" {{if eq .ID $.Doc.Page.ID}}aria-current="page"{{end}}>{{template "doc-mark" .}}<span>{{.Title}}</span>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</a></li>{{end}}
 {{range .Doc.Tree}}{{template "doc-folder" .}}{{end}}
 </ul>
-<details>
-<summary>新建目录</summary>
-<form class="stack" method="post" action="/docs/folders">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>名称<input name="name" required></label>
-<label>上级
-<select name="parent">
+<div id="doc-menu" class="doc-menu" hidden>
+<button type="button" data-act="new-doc">新建文档</button>
+<button type="button" data-act="new-folder">新建文件夹</button>
+<button type="button" data-act="rename">重命名</button>
+<button type="button" data-act="copy">复制</button>
+<button type="button" data-act="move">移动</button>
+<button type="button" data-act="color">修改颜色</button>
+<button type="button" data-act="icon">修改图标</button>
+<button type="button" data-act="delete" class="danger">删除</button>
+</div>
+<dialog id="doc-dialog">
+<form id="doc-dialog-form">
+<h2 id="doc-dialog-title">新建</h2>
+<label id="doc-field-name">名称<input id="doc-dialog-name" name="name" maxlength="80" required></label>
+<label id="doc-field-parent">目录
+<select id="doc-dialog-parent" name="parent">
 <option value="0">顶层</option>
 {{range .Doc.Folders}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
 </select>
 </label>
-<fieldset class="tones">
+<fieldset id="doc-field-tone" class="tones">
 <legend>颜色</legend>
-<label class="tone-ink"><input type="radio" name="tone" value="ink" checked>墨</label>
+<label class="tone-ink"><input type="radio" name="tone" value="ink">墨</label>
 <label class="tone-copper"><input type="radio" name="tone" value="copper">铜</label>
 <label class="tone-blue"><input type="radio" name="tone" value="blue">蓝</label>
 <label class="tone-red"><input type="radio" name="tone" value="red">红</label>
 <label class="tone-gold"><input type="radio" name="tone" value="gold">金</label>
 <label class="tone-plum"><input type="radio" name="tone" value="plum">紫</label>
 </fieldset>
-<label>图示
-<select name="mark">
-<option value="folder" selected>文件夹</option>
+<label id="doc-field-mark">图标
+<select id="doc-dialog-mark" name="mark">
+<option value="folder">文件夹</option>
+<option value="note">笔记</option>
 <option value="book">手册</option>
 <option value="wrench">维修</option>
 <option value="flask">实验</option>
 <option value="chip">器材</option>
-<option value="note">笔记</option>
 </select>
 </label>
-<button type="submit">创建目录</button>
+<p id="doc-dialog-hint" class="hint"></p>
+<div class="dialog-actions">
+<button type="button" id="doc-dialog-cancel">取消</button>
+<button type="submit" id="doc-dialog-ok">确定</button>
+</div>
 </form>
-</details>
+</dialog>
 </aside>
 {{end}}
 
 {{define "doc-folder"}}
-<li class="tone-{{.Tone}}">
-<div class="folder-head">
+<li class="node open">
+<div class="row tone-{{.Tone}}" data-kind="folder" data-id="{{.ID}}" data-name="{{.Name}}" data-parent="{{.ParentID}}" data-tone="{{.Tone}}" data-mark="{{.Mark}}">
+<button type="button" class="chevron" aria-expanded="true" aria-label="展开或收起"></button>
 {{template "doc-mark" .}}
-<span>{{.Name}}</span>
-<details>
-<summary>标记</summary>
-<form class="stack" method="post" action="/docs/folders/{{.ID}}">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>名称<input name="name" value="{{.Name}}" required></label>
-<label>上级
-<select name="parent">
-<option value="0">顶层</option>
-{{range .Choices}}{{if ne .ID $.ID}}<option value="{{.ID}}" {{if eq .ID $.ParentID}}selected{{end}}>{{.Name}}</option>{{end}}{{end}}
-</select>
-</label>
-{{template "doc-mark-fields" .}}
-<button type="submit">保存</button>
-</form>
-</details>
+<span class="label">{{.Name}}</span>
 </div>
 <ul>
-{{range .Pages}}<li><a class="page" href="/docs/p/{{.ID}}" {{if eq .ID $.Current}}aria-current="page"{{end}}>{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}
+{{range .Pages}}<li><a class="row tone-{{if .Tone}}{{.Tone}}{{else}}ink{{end}}" href="/docs/p/{{.ID}}" data-kind="page" data-id="{{.ID}}" data-name="{{.Title}}" data-folder="{{$.ID}}" data-tone="{{if .Tone}}{{.Tone}}{{else}}ink{{end}}" data-mark="{{if .Mark}}{{.Mark}}{{else}}note{{end}}" {{if eq .ID $.Current}}aria-current="page"{{end}}>{{template "doc-mark" .}}<span>{{.Title}}</span>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</a></li>{{end}}
 {{range .Kids}}{{template "doc-folder" .}}{{end}}
 </ul>
 </li>
@@ -97,26 +104,4 @@
 {{else}}<path d="M3 7h6l2 2h10v10H3z"/>
 {{end}}
 </svg>
-{{end}}
-
-{{define "doc-mark-fields"}}
-<fieldset class="tones">
-<legend>颜色</legend>
-<label class="tone-ink"><input type="radio" name="tone" value="ink" {{if or (eq .Tone "") (eq .Tone "ink")}}checked{{end}}>墨</label>
-<label class="tone-copper"><input type="radio" name="tone" value="copper" {{if eq .Tone "copper"}}checked{{end}}>铜</label>
-<label class="tone-blue"><input type="radio" name="tone" value="blue" {{if eq .Tone "blue"}}checked{{end}}>蓝</label>
-<label class="tone-red"><input type="radio" name="tone" value="red" {{if eq .Tone "red"}}checked{{end}}>红</label>
-<label class="tone-gold"><input type="radio" name="tone" value="gold" {{if eq .Tone "gold"}}checked{{end}}>金</label>
-<label class="tone-plum"><input type="radio" name="tone" value="plum" {{if eq .Tone "plum"}}checked{{end}}>紫</label>
-</fieldset>
-<label>图示
-<select name="mark">
-<option value="folder" {{if or (eq .Mark "") (eq .Mark "folder")}}selected{{end}}>文件夹</option>
-<option value="book" {{if eq .Mark "book"}}selected{{end}}>手册</option>
-<option value="wrench" {{if eq .Mark "wrench"}}selected{{end}}>维修</option>
-<option value="flask" {{if eq .Mark "flask"}}selected{{end}}>实验</option>
-<option value="chip" {{if eq .Mark "chip"}}selected{{end}}>器材</option>
-<option value="note" {{if eq .Mark "note"}}selected{{end}}>笔记</option>
-</select>
-</label>
 {{end}}

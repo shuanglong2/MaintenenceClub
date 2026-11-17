@@ -3,14 +3,38 @@
 <div class="docs-app">
 {{template "doc-side" .}}
 <div class="doc-main">
-<h1>{{.Title}}</h1>
 {{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
 {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
-<p class="hint">分屏里右边是编译结果. 行内公式 $F=ma$, 独立公式用 $$ . 物理式可用 \dv{v}{t}, \pdv{f}{x}, \vb{F}, \curl{\vb{B}}.</p>
-<form class="stack" method="post" action="{{if .Editing}}/docs/p/{{.Doc.Page.ID}}{{else}}/docs{{end}}">
+<div class="doc-bar">
+<div class="modes">
+<button type="button" data-mode-set="ir" {{if ne .Doc.Mode "sv"}}class="on"{{end}}>自动</button>
+<button type="button" data-mode-set="sv" {{if eq .Doc.Mode "sv"}}class="on"{{end}}>编辑</button>
+<a data-read href="/docs/p/{{.Doc.Page.ID}}">阅读</a>
+</div>
+<div class="format">
+<label>段落
+<select id="doc-block">
+<option value="">段落</option>
+<option value="0">正文</option>
+<option value="1">一级标题</option>
+<option value="2">二级标题</option>
+<option value="3">三级标题</option>
+</select>
+</label>
+<button type="button" data-cmd="math">公式</button>
+<button type="button" data-cmd="bold">加粗</button>
+<button type="button" data-cmd="mark">重点</button>
+<button type="button" data-cmd="under">下划线</button>
+<button type="button" data-cmd="table">表格</button>
+<button type="button" data-cmd="image">图片</button>
+<button type="submit" form="doc-form">保存</button>
+</div>
+</div>
+<form id="doc-form" class="stack" method="post" action="/docs/p/{{.Doc.Page.ID}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <input type="hidden" name="version" value="{{.Doc.Draft.Version}}">
-<label>标题<input name="title" value="{{.Doc.Draft.Title}}" required></label>
+<input class="doc-title" name="title" value="{{.Doc.Draft.Title}}" required maxlength="80" aria-label="标题">
+<div class="doc-meta">
 <label>目录
 <select name="folder">
 <option value="0">不放入目录</option>
@@ -28,11 +52,12 @@
 <input type="hidden" name="visibility" value="{{if .Doc.Draft.Visibility}}{{.Doc.Draft.Visibility}}{{else}}all{{end}}">
 {{end}}
 <label>标签<input name="tags" value="{{.Doc.Tags}}" placeholder="用逗号分隔"></label>
+</div>
 <textarea class="markdown-source" id="doc-body" name="body">{{.Doc.Draft.Body}}</textarea>
-<div id="doc-editor"></div>
-<button type="submit">保存</button>
+<input id="doc-image" type="file" accept="image/*">
+<div id="doc-editor" data-mode="{{if .Doc.Mode}}{{.Doc.Mode}}{{else}}ir{{end}}"></div>
 </form>
-{{if .Editing}}<p class="tools"><a href="/docs/p/{{.Doc.Page.ID}}">阅览</a></p>{{end}}
+<p class="hint">自动是边写边排版. 编辑看 Markdown 源码. 公式用 $ 或 $$ , 也可点「公式」.</p>
 </div>
 </div>
 <script src="{{static "vditor/dist/index.min.js"}}"></script>

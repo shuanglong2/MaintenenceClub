@@ -53,6 +53,7 @@ type docView struct {
 	Tags       string
 	HTML       template.HTML
 	Management bool
+	Mode       string
 	HasNext    bool
 	Offset     int
 }
@@ -105,18 +106,10 @@ func (s *server) docsIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) docsNew(w http.ResponseWriter, r *http.Request) {
-	user, actor, ok := s.docUser(w, r)
-	if !ok {
+	if _, _, ok := s.docUser(w, r); !ok {
 		return
 	}
-	view, err := s.docFrame(r, user, actor, docView{
-		Draft: docs.Draft{Visibility: "all"}, Management: actor.Role != "member",
-	})
-	if err != nil {
-		s.showDocErr(w, r, err)
-		return
-	}
-	s.render(w, r, http.StatusOK, page{Title: "新建文档", Body: "doc-form-body", Doc: view})
+	http.Redirect(w, r, "/docs?new=page", http.StatusSeeOther)
 }
 
 func (s *server) docsCreate(w http.ResponseWriter, r *http.Request) {
@@ -137,8 +130,12 @@ func (s *server) docsEdit(w http.ResponseWriter, r *http.Request) {
 		s.showDocErr(w, r, err)
 		return
 	}
+	mode := r.URL.Query().Get("mode")
+	if mode != "sv" {
+		mode = "ir"
+	}
 	view, err := s.docFrame(r, user, actor, docView{
-		Page: pageRow, Management: actor.Role != "member",
+		Page: pageRow, Management: actor.Role != "member", Mode: mode,
 		Draft: draftFrom(pageRow), Tags: strings.Join(pageRow.Tags, ", "),
 	})
 	if err != nil {
@@ -179,7 +176,11 @@ func (s *server) saveDoc(w http.ResponseWriter, r *http.Request, id int64) {
 		})
 		return
 	}
-	http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(out.Page.ID, 10), http.StatusSeeOther)
+	next := "/docs/p/" + strconv.FormatInt(out.Page.ID, 10)
+	if id == 0 && r.FormValue("next") == "edit" {
+		next += "/edit?mode=ir"
+	}
+	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
 func (s *server) docsConflict(w http.ResponseWriter, r *http.Request) {
@@ -449,6 +450,88 @@ func (s *server) docsFolderCreate(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, docsNext(r), http.StatusSeeOther)
 }
 
+func (s *server) docsFolderDelete(w http.ResponseWriter, r *http.Request) {
+	_, actor, ok := s.docUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	if err := s.docs.DeleteFolder(r.Context(), actor, id); err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/docs", http.StatusSeeOther)
+}
+
+func (s *server) docsRename(w http.ResponseWriter, r *http.Request) {
+	_, actor, ok := s.docUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	if err := s.docs.RenamePage(r.Context(), actor, id, r.FormValue("name")); err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, docsNext(r), http.StatusSeeOther)
+}
+
+func (s *server) docsCopy(w http.ResponseWriter, r *http.Request) {
+	_, actor, ok := s.docUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	pageRow, err := s.docs.Copy(r.Context(), actor, id)
+	if err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(pageRow.ID, 10)+"/edit?mode=ir", http.StatusSeeOther)
+}
+
+func (s *server) docsMove(w http.ResponseWriter, r *http.Request) {
+	_, actor, ok := s.docUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	folder, _ := strconv.ParseInt(r.FormValue("folder"), 10, 64)
+	if err := s.docs.MovePage(r.Context(), actor, id, folder); err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, docsNext(r), http.StatusSeeOther)
+}
+
+func (s *server) docsMark(w http.ResponseWriter, r *http.Request) {
+	_, actor, ok := s.docUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	if err := s.docs.MarkPage(r.Context(), actor, id, r.FormValue("tone"), r.FormValue("mark")); err != nil {
+		s.showDocErr(w, r, err)
+		return
+	}
+	http.Redirect(w, r, docsNext(r), http.StatusSeeOther)
+}
+
 func (s *server) docsFolderUpdate(w http.ResponseWriter, r *http.Request) {
 	_, actor, ok := s.docUser(w, r)
 	if !ok {
@@ -670,7 +753,7 @@ func (s *server) showDocErr(w http.ResponseWriter, r *http.Request, err error) {
 		s.notFound(w, r)
 	case errors.Is(err, docs.ErrForbidden):
 		s.render(w, r, http.StatusForbidden, page{Title: "提示", Body: "error-body", Status: http.StatusForbidden, Message: err.Error()})
-	case errors.Is(err, docs.ErrBadInput), errors.Is(err, files.ErrBadFile), errors.Is(err, files.ErrTooBig), errors.Is(err, files.ErrPixels), errors.Is(err, files.ErrQuota):
+	case errors.Is(err, docs.ErrBadInput), errors.Is(err, docs.ErrNotEmpty), errors.Is(err, files.ErrBadFile), errors.Is(err, files.ErrTooBig), errors.Is(err, files.ErrPixels), errors.Is(err, files.ErrQuota):
 		s.render(w, r, http.StatusBadRequest, page{Title: "提示", Body: "error-body", Status: http.StatusBadRequest, Message: err.Error()})
 	default:
 		s.internal(w, r, err)

@@ -3,12 +3,18 @@
 <div class="docs-app">
 {{template "doc-side" .}}
 <div class="doc-main">
-<h1>{{.Doc.Page.Title}}</h1>
+<div class="doc-bar">
+<div class="modes">
+<a href="/docs/p/{{.Doc.Page.ID}}/edit?mode=ir">自动</a>
+<a href="/docs/p/{{.Doc.Page.ID}}/edit?mode=sv">编辑</a>
+<a href="/docs/p/{{.Doc.Page.ID}}" aria-current="page">阅读</a>
+</div>
 <p class="tools">
-<a class="go" href="/docs/p/{{.Doc.Page.ID}}/edit">编辑</a>
 <a href="/docs/p/{{.Doc.Page.ID}}/history">历史</a>
 <a href="/docs/p/{{.Doc.Page.ID}}.md">原文</a>
 </p>
+</div>
+<h1>{{.Doc.Page.Title}}</h1>
 {{if .Doc.Page.Voided}}<p class="notice">已作废: {{.Doc.Page.VoidReason}}</p>{{end}}
 {{if .Doc.Page.Tags}}<p class="hint">{{range .Doc.Page.Tags}}<span>{{.}} </span>{{end}}</p>{{end}}
 <textarea class="markdown-source" id="doc-source">{{.Doc.Page.Body}}</textarea>

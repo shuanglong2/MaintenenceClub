@@ -476,9 +476,13 @@ mark {
   background: #ffe08a;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .docs-app {
   display: grid;
-  grid-template-columns: 17rem minmax(0, 1fr);
+  grid-template-columns: 18rem minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
 }
@@ -488,72 +492,106 @@ mark {
   top: 0.6rem;
   max-height: calc(100vh - 5.5rem);
   overflow: auto;
-  padding: 0.75rem;
+  padding: 0.55rem;
   background: #fffdf9;
   border: 1px solid #e4d9cc;
   border-radius: 0.8rem;
 }
 
+.tree-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.tree-actions button,
+.tree-actions a {
+  min-height: 2.1rem;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.86rem;
+}
+
 .doc-tree,
 .doc-tree ul {
   list-style: none;
-  margin: 0.35rem 0;
-  padding-left: 0.7rem;
+  margin: 0;
+  padding: 0;
 }
 
-.doc-tree {
-  padding-left: 0;
+.doc-tree ul {
+  display: none;
+  margin-left: 0.7rem;
+  padding-left: 0.35rem;
+  border-left: 1px solid #eadfd2;
 }
 
-.folder-head {
+.doc-tree .node.open > ul {
+  display: block;
+}
+
+.doc-tree .row {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  min-height: 2.2rem;
-  font-weight: 700;
-}
-
-.folder-head details {
-  margin-left: auto;
-}
-
-.folder-head summary {
-  color: #6d655c;
-  font-size: 0.82rem;
+  gap: 0.3rem;
+  min-height: 1.9rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.4rem;
+  color: #1d1a16;
   font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
 }
 
-.mark {
+.doc-tree a.row,
+.doc-tree .row {
+  min-height: 1.9rem;
+}
+
+.doc-tree .row:hover,
+.doc-tree a.row:hover {
+  background: #f6efe6;
+}
+
+.doc-tree a[aria-current="page"] {
+  background: #efe6da;
+}
+
+.chevron {
   width: 1.15rem;
+  min-height: 1.15rem;
   height: 1.15rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #6d655c;
+  box-shadow: none;
+}
+
+.chevron::before {
+  content: "";
+  display: block;
+  width: 0.38rem;
+  height: 0.38rem;
+  margin: 0 auto;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.node.open > .row .chevron::before {
+  transform: rotate(45deg);
+}
+
+.mark {
+  width: 1.05rem;
+  height: 1.05rem;
   flex: none;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.doc-tree a.page {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: #1d1a16;
-  font-weight: 600;
-}
-
-.doc-tree a.page::before {
-  content: "";
-  width: 0.45rem;
-  height: 0.58rem;
-  border: 1.5px solid currentColor;
-  border-radius: 0.12rem;
-}
-
-.doc-tree a[aria-current="page"] {
-  background: #efe6da;
-  border-radius: 0.45rem;
 }
 
 .tone-ink { color: #1f3d32; }
@@ -567,10 +605,125 @@ mark {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem 0.7rem;
+  border: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .tones label {
   font-weight: 700;
+}
+
+.doc-menu {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  min-width: 9.5rem;
+  padding: 0.3rem;
+  background: #fffdf9;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.6rem;
+  box-shadow: 0 10px 28px rgba(40, 28, 16, 0.16);
+}
+
+.doc-menu button {
+  min-height: 2rem;
+  justify-content: flex-start;
+  padding: 0.2rem 0.55rem;
+  background: transparent;
+  color: #1d1a16;
+  box-shadow: none;
+  text-align: left;
+}
+
+.doc-menu button:hover {
+  background: #f6efe6;
+}
+
+.doc-menu button.danger {
+  color: #8f2d2d;
+}
+
+#doc-dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  padding: 1rem 1.1rem;
+  border: 1px solid #e4d9cc;
+  border-radius: 0.9rem;
+  background: #fffdf9;
+}
+
+#doc-dialog::backdrop {
+  background: rgba(29, 26, 22, 0.35);
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.doc-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 0.7rem;
+}
+
+.modes,
+.format {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.modes button,
+.modes a,
+.format button {
+  min-height: 2.15rem;
+  padding: 0.2rem 0.65rem;
+}
+
+.modes .on,
+.modes a[aria-current="page"] {
+  background: #1f3d32;
+  color: #fffdf9;
+}
+
+.format label {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+}
+
+.format select {
+  width: auto;
+  min-height: 2.15rem;
+}
+
+.doc-title {
+  font-size: 1.45rem;
+  font-weight: 700;
+}
+
+.doc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+#doc-image {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.vditor-toolbar {
+  display: none;
 }
 
 .markdown-source {
