@@ -113,7 +113,7 @@
       name.required = false;
     } else if (kind === "delete") {
       title.textContent = "删除";
-      hint.textContent = row.getAttribute("data-kind") === "folder" ? "只删除空文件夹." : "文档会作废, 可以再恢复.";
+      hint.textContent = row.getAttribute("data-kind") === "folder" ? "只删除空文件夹." : "从目录里拿掉, 之后还能恢复.";
       name.required = false;
     }
     var folderName = kind === "new-folder" || (row && row.getAttribute("data-kind") === "folder" && kind === "rename");
@@ -264,10 +264,8 @@
   var host = document.getElementById("doc-editor");
   if (!body || !host || !window.Vditor || typeof Vditor !== "function") return;
   var form = body.closest("form");
-  var saved = body.value;
   var ready = false;
   var editor;
-  var mode = host.getAttribute("data-mode") || "ir";
 
   function uploadFiles(files) {
     var token = csrf();
@@ -297,14 +295,13 @@
     return chain.then(function () { return failed || null; }, function () { return "上传失败"; });
   }
 
-  function mount(next) {
-    mode = next;
+  function mount() {
     ready = false;
     if (editor && editor.destroy) editor.destroy();
     host.innerHTML = "";
     editor = new Vditor(host, {
       cdn: "/static/vditor",
-      mode: next === "sv" ? "sv" : "wysiwyg",
+      mode: "wysiwyg",
       lang: "zh_CN",
       theme: "classic",
       icon: "ant",
@@ -316,7 +313,10 @@
       markdown: { mark: true, sanitize: true },
       after: function () {
         ready = true;
-        if (next === "sv") editor.setPreviewMode("editor");
+        paintHTML(host);
+      },
+      input: function () {
+        paintHTML(host);
       },
       preview: {
         markdown: { mark: true, sanitize: true },
@@ -332,9 +332,50 @@
         handler: function (files) { return uploadFiles(files); }
       }
     });
-    document.querySelectorAll("[data-mode-set]").forEach(function (button) {
-      button.classList.toggle("on", button.getAttribute("data-mode-set") === next);
-    });
+  }
+
+  function tagText(node) {
+    return (node.textContent || "").replace(/\u200b/g, "").trim().toLowerCase();
+  }
+
+  function paintHTML(root) {
+    var codes = Array.prototype.slice.call(root.querySelectorAll("code[data-type='html-inline']"));
+    var i = 0;
+    while (i < codes.length) {
+      var open = tagText(codes[i]);
+      var kind = "";
+      var style = "";
+      if (open === "<u>") kind = "u";
+      else if (open === "<mark>") kind = "mark";
+      else if (open.indexOf("<span") === 0) {
+        kind = "span";
+        var found = open.match(/style="([^"]*)"/);
+        if (found) style = found[1];
+      }
+      if (!kind) {
+        i += 1;
+        continue;
+      }
+      var close = "</" + kind + ">";
+      var j = i + 1;
+      while (j < codes.length && tagText(codes[j]) !== close) j += 1;
+      if (j >= codes.length) {
+        i += 1;
+        continue;
+      }
+      var el = document.createElement(kind);
+      if (style) el.setAttribute("style", style);
+      var node = codes[i].nextSibling;
+      while (node && node !== codes[j]) {
+        var next = node.nextSibling;
+        el.appendChild(node);
+        node = next;
+      }
+      codes[i].parentNode.insertBefore(el, codes[i]);
+      codes[i].parentNode.removeChild(codes[i]);
+      codes[j].parentNode.removeChild(codes[j]);
+      i = j + 1;
+    }
   }
 
   function focusEditor() {
@@ -344,39 +385,21 @@
 
   function put(markdown) {
     if (!ready) return;
-    if (mode === "sv") {
-      editor.updateValue(markdown);
-      return;
-    }
     focusEditor();
     if (editor.getSelection()) document.execCommand("delete", false);
     editor.insertValue(markdown, true);
+    paintHTML(host);
   }
 
   function wrap(left, right, fallback) {
     if (!ready) return;
     var sel = editor.getSelection() || fallback;
-    if (mode === "sv") {
-      editor.updateValue(left + sel + right);
-      return;
-    }
     focusEditor();
     if (editor.getSelection()) document.execCommand("delete", false);
     editor.insertValue(left + sel + right, true);
+    paintHTML(host);
   }
 
-  document.querySelectorAll("[data-mode-set]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      if (ready) body.value = editor.getValue();
-      mount(button.getAttribute("data-mode-set"));
-    });
-  });
-  var readLink = document.querySelector("[data-read]");
-  if (readLink) {
-    readLink.addEventListener("click", function (event) {
-      if (ready && editor.getValue() !== saved && !window.confirm("还有未保存的修改, 要离开吗?")) event.preventDefault();
-    });
-  }
   var block = document.getElementById("doc-block");
   if (block) {
     block.addEventListener("change", function () {
@@ -420,7 +443,7 @@
     }
     body.value = editor.getValue();
   });
-  mount(mode);
+  mount();
 
   function mathOptions() {
     return {

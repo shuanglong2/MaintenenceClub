@@ -726,6 +726,15 @@ mark {
   display: none;
 }
 
+.vditor-wysiwyg__block[data-type="math-block"] > pre:first-child:not([style*="none"]) + .vditor-wysiwyg__preview,
+.vditor-wysiwyg__block[data-type="math-inline"] > code:not([style*="none"]) + .vditor-wysiwyg__preview {
+  display: none;
+}
+
+#doc-editor u {
+  text-decoration: underline;
+}
+
 .markdown-source {
   position: absolute;
   width: 1px;

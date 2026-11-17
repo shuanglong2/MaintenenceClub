@@ -130,12 +130,12 @@ func (s *server) docsEdit(w http.ResponseWriter, r *http.Request) {
 		s.showDocErr(w, r, err)
 		return
 	}
-	mode := r.URL.Query().Get("mode")
-	if mode != "sv" {
-		mode = "ir"
+	if pageRow.Voided {
+		http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(pageRow.ID, 10), http.StatusSeeOther)
+		return
 	}
 	view, err := s.docFrame(r, user, actor, docView{
-		Page: pageRow, Management: actor.Role != "member", Mode: mode,
+		Page: pageRow, Management: actor.Role != "member",
 		Draft: draftFrom(pageRow), Tags: strings.Join(pageRow.Tags, ", "),
 	})
 	if err != nil {
@@ -176,11 +176,7 @@ func (s *server) saveDoc(w http.ResponseWriter, r *http.Request, id int64) {
 		})
 		return
 	}
-	next := "/docs/p/" + strconv.FormatInt(out.Page.ID, 10)
-	if id == 0 && r.FormValue("next") == "edit" {
-		next += "/edit?mode=ir"
-	}
-	http.Redirect(w, r, next, http.StatusSeeOther)
+	http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(out.Page.ID, 10)+"/edit", http.StatusSeeOther)
 }
 
 func (s *server) docsConflict(w http.ResponseWriter, r *http.Request) {
@@ -235,6 +231,10 @@ func (s *server) docsView(w http.ResponseWriter, r *http.Request) {
 	row, err := s.docs.Get(r.Context(), actor, id)
 	if err != nil {
 		s.showDocErr(w, r, err)
+		return
+	}
+	if !row.Voided {
+		http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(row.ID, 10)+"/edit", http.StatusSeeOther)
 		return
 	}
 	view, err := s.docFrame(r, user, actor, docView{Page: row, Management: actor.Role != "member"})
@@ -496,7 +496,7 @@ func (s *server) docsCopy(w http.ResponseWriter, r *http.Request) {
 		s.showDocErr(w, r, err)
 		return
 	}
-	http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(pageRow.ID, 10)+"/edit?mode=ir", http.StatusSeeOther)
+	http.Redirect(w, r, "/docs/p/"+strconv.FormatInt(pageRow.ID, 10)+"/edit", http.StatusSeeOther)
 }
 
 func (s *server) docsMove(w http.ResponseWriter, r *http.Request) {

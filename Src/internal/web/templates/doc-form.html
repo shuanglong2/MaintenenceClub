@@ -6,11 +6,6 @@
 {{if .Notice}}<p class="notice">{{.Notice}}</p>{{end}}
 {{if .Error}}<p class="error">{{.Error}}</p>{{end}}
 <div class="doc-bar">
-<div class="modes">
-<button type="button" data-mode-set="ir" {{if ne .Doc.Mode "sv"}}class="on"{{end}}>自动</button>
-<button type="button" data-mode-set="sv" {{if eq .Doc.Mode "sv"}}class="on"{{end}}>编辑</button>
-<a data-read href="/docs/p/{{.Doc.Page.ID}}">阅读</a>
-</div>
 <div class="format">
 <label>段落
 <select id="doc-block">
@@ -55,9 +50,8 @@
 </div>
 <textarea class="markdown-source" id="doc-body" name="body">{{.Doc.Draft.Body}}</textarea>
 <input id="doc-image" type="file" accept="image/*">
-<div id="doc-editor" data-mode="{{if .Doc.Mode}}{{.Doc.Mode}}{{else}}ir{{end}}"></div>
+<div id="doc-editor"></div>
 </form>
-<p class="hint">自动直接看到排好的样子. 编辑看 Markdown 源码. 公式用 $ 或 $$ , 也可点「公式」.</p>
 </div>
 </div>
 <script src="{{static "vditor/dist/index.min.js"}}"></script>
