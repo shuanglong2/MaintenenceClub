@@ -5,8 +5,11 @@ import (
 	"errors"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/skip2/go-qrcode"
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
@@ -305,6 +308,42 @@ func (s *server) inventoryLabel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.render(w, r, http.StatusOK, page{Title: "标签 " + item.Code, Body: "item-label-body", Inv: invView{Item: item}})
+}
+
+func (s *server) inventoryQR(w http.ResponseWriter, r *http.Request) {
+	_, actor, ok := s.invUser(w, r)
+	if !ok {
+		return
+	}
+	id, ok := s.docID(w, r)
+	if !ok {
+		return
+	}
+	if _, err := s.inv.Get(r.Context(), actor, id); err != nil {
+		s.showInvErr(w, r, err)
+		return
+	}
+	link, err := itemLink(r, id)
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	png, err := qrcode.Encode(link, qrcode.Medium, 256)
+	if err != nil {
+		s.internal(w, r, err)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "private, max-age=3600")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	_, _ = w.Write(png)
+}
+
+func itemLink(r *http.Request, id int64) (string, error) {
+	if r.Host == "" || strings.ContainsAny(r.Host, " /\r\n") {
+		return "", errors.New("主机无效")
+	}
+	return (&url.URL{Scheme: "http", Host: r.Host, Path: "/inventory/items/" + strconv.FormatInt(id, 10)}).String(), nil
 }
 
 func (s *server) inventoryLocation(w http.ResponseWriter, r *http.Request) {

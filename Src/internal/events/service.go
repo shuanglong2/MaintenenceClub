@@ -437,6 +437,44 @@ type scanner interface {
 	Scan(dest ...any) error
 }
 
+// Search 按标题, 地点和正文查找活动.
+func (s *Service) Search(ctx context.Context, actor Actor, query string) ([]Event, error) {
+	if !join(actor) {
+		return nil, ErrForbidden
+	}
+	query = strings.TrimSpace(query)
+	if query == "" {
+		return nil, nil
+	}
+	pattern := "%" + escapeLike(query) + "%"
+	rows, err := s.pool.Query(ctx, `
+SELECT id, title, kind, place, body, summary, starts_at, ends_at, all_day, owner_id, owner_name, status, signup_until
+FROM events.events
+WHERE title ILIKE $1 ESCAPE '\' OR place ILIKE $1 ESCAPE '\' OR body ILIKE $1 ESCAPE '\'
+ORDER BY starts_at DESC, id DESC
+LIMIT 8`, pattern)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Event
+	for rows.Next() {
+		event, err := scanEvent(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, event)
+	}
+	return out, rows.Err()
+}
+
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
 func scanEvent(row scanner) (Event, error) {
 	var event Event
 	err := row.Scan(

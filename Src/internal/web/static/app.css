@@ -87,6 +87,13 @@ button,
   padding: 0.4rem 0.8rem;
 }
 
+.tools a,
+.search-hit {
+  display: inline-block;
+  min-height: 2.75rem;
+  line-height: 1.9rem;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -193,10 +200,16 @@ mark {
   border: 1px solid #1c1c1c;
   padding: 1.5rem;
   background: #fff;
+  overflow-wrap: anywhere;
 }
 
 .label-sheet h1 {
   font-size: 2rem;
+}
+
+.label-qr {
+  width: 3.2cm;
+  height: 3.2cm;
 }
 
 .cal {

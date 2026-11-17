@@ -2,7 +2,9 @@
 
 学校维修组的内网网站. 程序名是 mclub, 用 Go 编写, 仓库名是 MaintenenceClub.
 
-网站只在内网使用. 不在本机编译. 推送到 GitHub 后, Actions 检查格式, 测试, 并交叉编译 linux-x64 与 win-x64. 服务器运行 `Publish/linux-x64/mclub`, 前面是 Nginx, 数据库是 PostgreSQL 18.
+网站只在内网使用, 继续走 HTTP, 不启用 HTTPS. 手机不需要安装内部证书. 二维码用手机自带相机打开物品页, 页面里不调用相机. 同一局域网里的人有机会看到未加密的流量, 改数据仍要带登录后的校验令牌. 以后若要改成 HTTPS, 由 Nginx 终止 TLS, 再把 `MCLUB_COOKIE_SECURE` 设为 `true`.
+
+不在本机编译. 推送到 GitHub 后, Actions 检查格式, 测试, 并交叉编译 linux-x64 与 win-x64. 服务器运行 `Publish/linux-x64/mclub`, 前面是 Nginx, 数据库是 PostgreSQL 18.
 
 登录后可以写文档, 登记库存, 也可以安排活动. 正文是 Markdown, 图片和附件从编辑页上传. 仅管理层的页面, 组员打不开, 搜索也找不到. 库存数量由流水加总, 借还只改变器材状态. 活动时间按北京时间填写, 全天活动只记日期. 任务可以列表或看板查看, 也能从活动页直接建出来. 登录后的首页按人汇总未完成任务, 即将到期, 近期活动, 低库存和最近文档. 维修记录可以领用元件, 作废后库存加回, 器材页能看到维修保养历史. 财务流水按分记账, 手头和储蓄由加总得到, 组员看不到.
 
@@ -58,5 +60,24 @@ Res/deploy/pull-backup.sh 用户@服务器 本地目录
 6. 记下结束时间. 临时库可以留着. 不要删除 `mclub` 和已有的 `mclub_restore_test`.
 
 2026-11-17 在同一台服务器上按上面的步骤还原到临时库 `mclub_restore_m7`, 从建库到对比完成用了 2 秒. 人员, 文档, 物品, 活动和财务的行数都是 1, 4, 2, 1, 1, 四篇文档标题一致. 当时上传目录没有文件, 快照里的文件数也是 0. 没有第二台机器, 所以上传文件没有在另一台机器上展开. 旧的 `mclub_restore_test` 没有删除.
+
+## 安装, 升级与回滚
+
+在服务器上用 root 执行 `Res/deploy/install.sh`. 它用系统自带的 PostgreSQL 18 和 Nginx, 建立 `mclub` 用户, 数据库和每天 03:00 的备份定时器. 环境变量在 `/etc/mclub/mclub.env`.
+
+升级时把新的 Linux 二进制交给 `deploy.sh`. 它会先转储数据库, 再执行 `migrate`, 然后切换 `/srv/maintclub/app` 并重启. 迁移只向前, 不会自动撤销. 健康检查失败时, 脚本会把链接指回上一版.
+
+手动回滚:
+
+```text
+ln -sfn "$(cat /srv/maintclub/previous)" /srv/maintclub/app
+systemctl restart mclub
+```
+
+数据库结构如果已经升过, 只换回旧二进制可能对不上. 那种情况用备份里的转储恢复到临时库核对, 不要直接覆盖正在使用的 `mclub`.
+
+## 常见故障
+
+打不开页面时先看 `curl -fsS http://127.0.0.1:8080/healthz`. `database` 不是 `ok` 就看 `journalctl -u mclub -n 80`. 备份失败看 `/srv/maintclub/backups/LAST_STATUS` 和 `journalctl -u mclub-backup`. 组长的状态页会在磁盘剩余低于 15%, 或上传占用达到 6 GB 配额的 80% 时给出提示. 单个上传不能超过 20 MB. 登录后如果一直停在改密码页, 是因为初始密码还没改过.
 
 打 `v*` 标签后, Actions 把 `mclub-linux-x64`, `mclub-win-x64.exe` 和 `SHA256SUMS` 发到 GitHub Release.

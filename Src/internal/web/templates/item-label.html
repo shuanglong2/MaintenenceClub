@@ -4,6 +4,7 @@
 <h1>{{.Inv.Item.Name}}</h1>
 <p>{{.Inv.Item.Code}}</p>
 <p>{{.Inv.Item.Location}}</p>
+<img class="label-qr" alt="物品二维码" src="/inventory/items/{{.Inv.Item.ID}}/qr.png">
 <p class="hint">/inventory/items/{{.Inv.Item.ID}}</p>
 </article>
 <p class="tools"><a href="/inventory/items/{{.Inv.Item.ID}}">返回物品</a></p>

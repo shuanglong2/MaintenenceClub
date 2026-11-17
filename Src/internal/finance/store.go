@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -329,8 +330,23 @@ func listWhere(filter Filter) (string, []any, error) {
 	if filter.ActorID > 0 {
 		where = append(where, fmt.Sprintf("e.actor_id = $%d", n))
 		args = append(args, filter.ActorID)
+		n++
+	}
+	if q := strings.TrimSpace(filter.Query); q != "" {
+		if utf8.RuneCountInString(q) > 40 {
+			return "", nil, errInput("搜索词太长")
+		}
+		where = append(where, fmt.Sprintf(`e.note ILIKE $%d ESCAPE '\'`, n))
+		args = append(args, "%"+escapeLike(q)+"%")
 	}
 	return strings.Join(where, " AND "), args, nil
+}
+
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
 }
 
 // Export 导出筛选后的流水, 并写入审计.

@@ -62,6 +62,34 @@ const manualBody = `# 各角色常用操作
 3. 仅管理层可见的文档用来放内部约定.
 4. 状态页看磁盘, 备份和版本. 红色提示要当天处理.
 5. 备份每天自动做. 每周在另一台电脑上再拉一份副本.
+6. 换届时先建好新组长, 再把自己改成其他角色或退出. 资料和账都留着.
+`
+
+const previousManualBody = `# 各角色常用操作
+
+## 组员
+
+1. 登录后在首页看自己的任务和近期活动.
+2. 在文档里查找仪器用法, 搜不到就问组长.
+3. 活动页报名, 到场后让负责人签到.
+4. 领用耗材前看库存数量, 不够就在任务里说明.
+5. 干完活写一条工作日志, 报修写维修记录.
+
+## 副组长
+
+1. 活动开始前建活动, 结束后写总结.
+2. 给任务指定负责人, 在看板上看进度.
+3. 盘点时按位置核对数量, 再确认盘点单.
+4. 维修记录里更换元件, 数量会自动扣库存.
+5. 看审计, 确认谁改了文档或库存.
+
+## 组长
+
+1. 在人员页建立账号, 把初始密码交给本人, 需要时打开财务开关.
+2. 财务页记收入, 支出, 存入和取出. 作废必须写原因, 原记录会留着.
+3. 仅管理层可见的文档用来放内部约定.
+4. 状态页看磁盘, 备份和版本. 红色提示要当天处理.
+5. 备份每天自动做. 每周在另一台电脑上再拉一份副本.
 `
 
 // EnsureWelcome 在还没有任何文档时放入两篇说明.
@@ -108,6 +136,9 @@ func (s *Service) EnsureManual(ctx context.Context) error {
 	if err := s.refreshBackup(ctx); err != nil {
 		return err
 	}
+	if err := s.replaceSeed(ctx, manualTitle, manualBody, previousManualBody); err != nil {
+		return err
+	}
 	var count int
 	if err := s.pool.QueryRow(ctx, `SELECT count(*) FROM docs.pages WHERE title = $1 AND voided_at IS NULL`, manualTitle).Scan(&count); err != nil {
 		return err
@@ -144,12 +175,16 @@ VALUES ($1, 1, $2, $3, '系统')`, id, manualTitle, manualBody); err != nil {
 }
 
 func (s *Service) refreshBackup(ctx context.Context) error {
-	tokens := search.Join(backupTitle + "\n" + backupBody)
+	return s.replaceSeed(ctx, backupTitle, backupBody, previousBackupBody)
+}
+
+func (s *Service) replaceSeed(ctx context.Context, title, next, previous string) error {
+	tokens := search.Join(title + "\n" + next)
 	rows, err := s.pool.Query(ctx, `
 UPDATE docs.pages
 SET body = $1, search_tokens = $2, version = version + 1, updated_at = now()
 WHERE title = $3 AND body = $4 AND voided_at IS NULL
-RETURNING id, version`, backupBody, tokens, backupTitle, previousBackupBody)
+RETURNING id, version`, next, tokens, title, previous)
 	if err != nil {
 		return err
 	}
@@ -172,7 +207,7 @@ RETURNING id, version`, backupBody, tokens, backupTitle, previousBackupBody)
 	for _, item := range pages {
 		if _, err := s.pool.Exec(ctx, `
 INSERT INTO docs.page_versions (page_id, version, title, body, editor_name)
-VALUES ($1, $2, $3, $4, '系统')`, item.id, item.version, backupTitle, backupBody); err != nil {
+VALUES ($1, $2, $3, $4, '系统')`, item.id, item.version, title, next); err != nil {
 			return err
 		}
 	}

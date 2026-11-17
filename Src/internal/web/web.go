@@ -107,6 +107,7 @@ type page struct {
 	Log        logView
 	Fin        finView
 	Sys        systemView
+	Find       findView
 }
 
 type userView struct {
@@ -189,6 +190,7 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /{$}", s.home)
 	mux.HandleFunc("GET /healthz", s.healthz)
 	mux.HandleFunc("GET /static/{path...}", s.staticFile)
+	mux.HandleFunc("GET /search", s.search)
 	mux.HandleFunc("GET /login", s.loginForm)
 	mux.HandleFunc("POST /login", s.login)
 	mux.HandleFunc("POST /logout", s.logout)
@@ -239,6 +241,7 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /inventory/locations", s.inventoryLocation)
 	mux.HandleFunc("GET /inventory/items/{id}/edit", s.inventoryEdit)
 	mux.HandleFunc("GET /inventory/items/{id}/label", s.inventoryLabel)
+	mux.HandleFunc("GET /inventory/items/{id}/qr.png", s.inventoryQR)
 	mux.HandleFunc("POST /inventory/items/{id}/photo", s.inventoryPhoto)
 	mux.HandleFunc("POST /inventory/items/{id}/void", s.inventoryVoid)
 	mux.HandleFunc("POST /inventory/items/{id}/unvoid", s.inventoryUnvoid)

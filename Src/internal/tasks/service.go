@@ -97,6 +97,7 @@ type Filter struct {
 	Mine   bool
 	Kind   string
 	Status string
+	Query  string
 	Sort   string
 	Offset int
 	Limit  int
@@ -493,8 +494,20 @@ func filterSQL(actor Actor, filter Filter) (string, []any, error) {
 		}
 		where = append(where, fmt.Sprintf("t.status = $%d", n))
 		args = append(args, filter.Status)
+		n++
+	}
+	if q := strings.TrimSpace(filter.Query); q != "" {
+		where = append(where, fmt.Sprintf(`t.title ILIKE $%d ESCAPE '\'`, n))
+		args = append(args, "%"+escapeLike(q)+"%")
 	}
 	return strings.Join(where, " AND "), args, nil
+}
+
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
 }
 
 func filterOrder(sort string) (string, error) {

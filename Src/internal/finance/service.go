@@ -88,6 +88,7 @@ type Filter struct {
 	Kind       string
 	CategoryID int64
 	ActorID    int64
+	Query      string
 	Offset     int
 	Limit      int
 }
