@@ -1,6 +1,6 @@
 {{define "docs-body"}}
 <h1>文档</h1>
-<p class="tools"><a href="/docs/new">新建</a><a href="/docs/search">搜索</a><a href="/docs/export">导出</a></p>
+<p class="tools"><a class="go" href="/docs/new">新建</a><a href="/docs/search">搜索</a><a href="/docs/export">导出</a></p>
 {{if and (not .Doc.Tree) (not .Doc.Loose)}}<p class="empty">还没有文档.</p>{{end}}
 <ul class="tree">
 {{range .Doc.Loose}}<li><a href="/docs/p/{{.ID}}">{{.Title}}</a>{{if eq .Visibility "management"}} <span class="hint">管理层</span>{{end}}</li>{{end}}

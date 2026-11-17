@@ -1,6 +1,6 @@
 {{define "events-body"}}
 <h1>{{.Evt.MonthLabel}}</h1>
-<p class="tools"><a href="/events?month={{.Evt.Prev}}">上个月</a> <a href="/events?month={{.Evt.Next}}">下个月</a> <a href="/events/list">列表</a> {{if .Evt.Manage}}<a href="/events/new">新建</a>{{end}}</p>
+<p class="tools"><a href="/events?month={{.Evt.Prev}}">上个月</a> <a href="/events?month={{.Evt.Next}}">下个月</a> <a href="/events/list">列表</a> {{if .Evt.Manage}}<a class="go" href="/events/new">新建</a>{{end}}</p>
 <div class="cal">
 {{range .Evt.Heads}}<div class="cal-head">{{.}}</div>{{end}}
 {{range .Evt.Days}}<div class="cal-day{{if not .InMonth}} muted{{end}}"><div class="cal-date">{{.Day}}</div>{{range .Items}}<a href="/events/{{.ID}}">{{.Title}}</a>{{end}}</div>{{end}}

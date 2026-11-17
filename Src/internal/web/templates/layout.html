@@ -9,17 +9,28 @@
 <body>
 <header class="top">
 <a class="brand" href="/">维修组</a>
-<nav>
 {{if .User}}
-{{if not .User.MustChange}}<a href="/search">搜索</a><a href="/docs">文档</a><a href="/inventory">库存</a><a href="/events">活动</a><a href="/tasks">任务</a><a href="/logs">日志</a>{{if and .Finance (not .User.MustChange)}}<a href="/finance">财务</a>{{end}}<a href="/people">人员</a>{{end}}
-{{if and .ShowAudit (not .User.MustChange)}}<a href="/audit">审计</a>{{end}}
-{{if and .ShowManage (not .User.MustChange)}}<a href="/system">状态</a>{{end}}
-<a href="/account">我的</a>
-<form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">退出</button></form>
-{{else}}
-<a href="/login">登录</a>
-{{end}}
+{{if not .User.MustChange}}
+<nav>
+<a href="/search" {{if navOn .Path "/search"}}aria-current="page"{{end}}>搜索</a>
+<a href="/docs" {{if navOn .Path "/docs"}}aria-current="page"{{end}}>文档</a>
+<a href="/inventory" {{if navOn .Path "/inventory"}}aria-current="page"{{end}}>库存</a>
+<a href="/events" {{if navOn .Path "/events"}}aria-current="page"{{end}}>活动</a>
+<a href="/tasks" {{if navOn .Path "/tasks"}}aria-current="page"{{end}}>任务</a>
+<a href="/logs" {{if navOn .Path "/logs"}}aria-current="page"{{end}}>日志</a>
+{{if .Finance}}<a href="/finance" {{if navOn .Path "/finance"}}aria-current="page"{{end}}>财务</a>{{end}}
+<a href="/people" {{if navOn .Path "/people"}}aria-current="page"{{end}}>人员</a>
+{{if .ShowAudit}}<a href="/audit" {{if navOn .Path "/audit"}}aria-current="page"{{end}}>审计</a>{{end}}
+{{if .ShowManage}}<a href="/system" {{if navOn .Path "/system"}}aria-current="page"{{end}}>状态</a>{{end}}
 </nav>
+{{end}}
+<div class="account">
+<a href="/account" {{if navOn .Path "/account"}}aria-current="page"{{end}}>我的</a>
+<form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">退出</button></form>
+</div>
+{{else}}
+<nav><a href="/login">登录</a></nav>
+{{end}}
 </header>
 <main>{{.HTML}}</main>
 <script src="{{static "htmx.min.js"}}"></script>

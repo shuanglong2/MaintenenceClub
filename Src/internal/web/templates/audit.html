@@ -8,14 +8,14 @@
 <button type="submit">筛选</button>
 </form>
 {{if not .Audit}}<p class="empty">没有记录.</p>{{else}}
-<table>
+<div class="table-scroll"><table>
 <thead><tr><th>时间</th><th>人员</th><th>动作</th><th>摘要</th></tr></thead>
 <tbody>
 {{range .Audit}}
 <tr><td>{{.At}}</td><td>{{.Actor}}</td><td>{{.Action}}</td><td>{{.Summary}}</td></tr>
 {{end}}
 </tbody>
-</table>
+</table></div>
 <p class="tools">
 {{if .Offset}}<a href="/audit?offset={{.Prev}}&amp;actor={{.Filter.Actor}}&amp;action={{.Filter.Action}}&amp;from={{.Filter.From}}&amp;to={{.Filter.To}}">上一页</a>{{end}}
 {{if .HasNext}}<a href="/audit?offset={{add .Offset 50}}&amp;actor={{.Filter.Actor}}&amp;action={{.Filter.Action}}&amp;from={{.Filter.From}}&amp;to={{.Filter.To}}">下一页</a>{{end}}

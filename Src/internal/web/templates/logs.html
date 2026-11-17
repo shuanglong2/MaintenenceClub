@@ -1,7 +1,7 @@
 {{define "logs-body"}}
 <h1>日志</h1>
-<p class="tools"><a href="/logs/new?kind=work">工作日志</a> <a href="/logs/new?kind=repair">维修记录</a> <a href="/logs/new?kind=maintain">保养记录</a></p>
-<form class="stack" method="get" action="/logs">
+<p class="tools"><a class="go" href="/logs/new?kind=work">工作日志</a> <a href="/logs/new?kind=repair">维修记录</a> <a href="/logs/new?kind=maintain">保养记录</a></p>
+<form class="filters" method="get" action="/logs">
 <label><input type="checkbox" name="mine" value="1" {{if .Log.Mine}}checked{{end}}>只看我的</label>
 <label>类型<select name="kind"><option value="">全部</option>
 <option value="work" {{if eq .Log.Kind "work"}}selected{{end}}>工作日志</option>
@@ -20,11 +20,11 @@
 {{if .Log.Entries}}
 {{range .Log.Entries}}
 <article>
-<p><a href="/logs/{{.ID}}">{{logKind .Kind}}</a> {{.DateText}} {{.AuthorName}}</p>
-<p>{{.Snippet}}{{if .Status}} · {{logStatus .Status}}{{end}}</p>
+<p class="entry-line"><a href="/logs/{{.ID}}">{{logKind .Kind}}</a> <span>{{.DateText}} · {{.AuthorName}}</span></p>
+<p class="meta">{{.Snippet}}{{if .Status}} · {{logStatus .Status}}{{end}}</p>
 </article>
 {{end}}
-<p>共 {{.Log.Total}} 条
+<p class="pager">共 {{.Log.Total}} 条
 {{if gt .Log.Page 1}}<a href="{{.Log.PageHref (add .Log.Page -1)}}">上一页</a>{{end}}
 {{if .Log.HasNext}}<a href="{{.Log.PageHref (add .Log.Page 1)}}">下一页</a>{{end}}
 </p>

@@ -1,11 +1,16 @@
 {{define "home-body"}}
-<h1>维修组</h1>
 {{if .User}}
-<p>你好, {{.User.Name}}.</p>
-{{range .Widgets}}<section class="widget"><h2>{{.Title}}</h2>{{.HTML}}</section>{{end}}
-{{if not .Widgets}}<p class="empty">暂无汇总.</p>{{end}}
+<header class="page-head">
+<h1>今天</h1>
+<p class="lead">你好, {{.User.Name}}. 下面是现在要处理的事.</p>
+</header>
+{{if .Widgets}}<div class="widgets">{{range .Widgets}}<section class="widget"><h2>{{.Title}}</h2>{{.HTML}}</section>{{end}}</div>
+{{else}}<p class="empty">暂无汇总.</p>{{end}}
 {{else}}
-<p>内部站点已运行.</p>
-<p><a href="/login">登录</a></p>
+<header class="page-head">
+<h1>维修组</h1>
+<p class="lead">内部站点已运行.</p>
+</header>
+<p class="tools"><a class="go" href="/login">登录</a></p>
 {{end}}
 {{end}}

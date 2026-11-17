@@ -3,7 +3,7 @@
 <p class="tools">
 <a href="/inventory/low">低库存</a>
 <a href="/inventory/export.csv">导出</a>
-{{if .Inv.Manage}}<a href="/inventory/new">新建</a><a href="/inventory/import">导入</a><a href="/inventory/stocktakes">盘点</a>{{end}}
+{{if .Inv.Manage}}<a class="go" href="/inventory/new">新建</a><a href="/inventory/import">导入</a><a href="/inventory/stocktakes">盘点</a>{{end}}
 </p>
 <form class="filters" method="get" action="/inventory">
 <label>关键词<input name="q" value="{{.Inv.Query}}"></label>
@@ -20,7 +20,7 @@
 </form>
 {{if .Inv.Notice}}<p class="hint">{{.Inv.Notice}}</p>{{end}}
 {{if not .Inv.Items}}<p class="empty">没有物品.</p>{{else}}
-<table>
+<div class="table-scroll"><table>
 <thead><tr><th>编号</th><th>名称</th><th>类别</th><th>数量</th><th>位置</th></tr></thead>
 <tbody>
 {{range .Inv.Items}}
@@ -33,7 +33,7 @@
 </tr>
 {{end}}
 </tbody>
-</table>
+</table></div>
 {{end}}
 {{if .Inv.Manage}}
 <h2>新建位置</h2>

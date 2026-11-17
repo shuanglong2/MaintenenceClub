@@ -1,7 +1,7 @@
 {{define "tasks-body"}}
 <h1>任务</h1>
-<p class="tools"><a href="/tasks/board">看板</a> <a href="/tasks/new">新建</a></p>
-<form class="stack" method="get" action="/tasks">
+<p class="tools"><a href="/tasks/board">看板</a> <a class="go" href="/tasks/new">新建</a></p>
+<form class="filters" method="get" action="/tasks">
 <label><input type="checkbox" name="mine" value="1" {{if .Task.Mine}}checked{{end}}>只看我的</label>
 <label>类型<select name="kind"><option value="">全部</option>{{range .Task.Kinds}}<option value="{{.}}" {{if eq . $.Task.Kind}}selected{{end}}>{{.}}</option>{{end}}</select></label>
 <label>状态<select name="status"><option value="">全部</option>{{range .Task.Statuses}}<option value="{{.}}" {{if eq . $.Task.Status}}selected{{end}}>{{taskStatus .}}</option>{{end}}</select></label>
@@ -15,11 +15,11 @@
 {{if .Task.Tasks}}
 {{range .Task.Tasks}}
 <article>
-<p><a href="/tasks/{{.ID}}">{{.Title}}</a> {{taskStatus .Status}} · {{taskPriority .Priority}}</p>
-<p>{{.Kind}} · {{.OwnerName}}{{if .DueText}} · 截止 {{.DueText}}{{end}}{{if .EventTitle}} · <a href="/events/{{.EventID}}">{{.EventTitle}}</a>{{end}}</p>
+<p class="entry-line"><a href="/tasks/{{.ID}}">{{.Title}}</a> <span>{{taskStatus .Status}} · {{taskPriority .Priority}}</span></p>
+<p class="meta">{{.Kind}} · {{.OwnerName}}{{if .DueText}} · 截止 {{.DueText}}{{end}}{{if .EventTitle}} · <a href="/events/{{.EventID}}">{{.EventTitle}}</a>{{end}}</p>
 </article>
 {{end}}
-<p>共 {{.Task.Total}} 条
+<p class="pager">共 {{.Task.Total}} 条
 {{if gt .Task.Page 1}}<a href="{{.Task.ListHref .Task.Prev}}">上一页</a>{{end}}
 {{if .Task.HasNext}}<a href="{{.Task.ListHref .Task.Next}}">下一页</a>{{end}}
 </p>

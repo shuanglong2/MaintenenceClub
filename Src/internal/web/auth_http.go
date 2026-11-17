@@ -149,6 +149,7 @@ func (s *server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) fill(r *http.Request, data *page) {
+	data.Path = r.URL.Path
 	user, ok := visitorFrom(r)
 	if !ok {
 		return

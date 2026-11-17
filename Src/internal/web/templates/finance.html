@@ -4,8 +4,8 @@
 <p class="card">手头 {{yuan .Fin.Cash}} 元</p>
 <p class="card">储蓄 {{yuan .Fin.Savings}} 元</p>
 </div>
-<p class="tools"><a href="/finance/stats">统计</a> <a href="/finance/export.csv">导出</a>{{if .Fin.CanWrite}} <a href="/finance/new">记一笔</a>{{end}}</p>
-<form class="stack" method="get" action="/finance">
+<p class="tools"><a href="/finance/stats">统计</a> <a href="/finance/export.csv">导出</a>{{if .Fin.CanWrite}} <a class="go" href="/finance/new">记一笔</a>{{end}}</p>
+<form class="filters" method="get" action="/finance">
 <label>月份<input type="month" name="month" value="{{.Fin.Month}}"></label>
 <label>类型<select name="kind"><option value="">全部</option>
 <option value="in" {{if eq .Fin.Kind "in"}}selected{{end}}>收入</option>
@@ -23,12 +23,13 @@
 </form>
 {{if .Fin.Entries}}
 {{range .Fin.Entries}}
-<article {{if .Voided}}class="muted"{{end}}>
-<p><a href="/finance/{{.ID}}">{{finKind .Kind}}</a> {{.DateText}} {{yuan .Cents}} 元 {{.Category}} {{.ActorName}}{{if .Voided}} 已作废{{end}}</p>
-<p>{{.Note}}</p>
+<article{{if .Voided}} class="muted"{{end}}>
+<p class="entry-line"><a href="/finance/{{.ID}}">{{finKind .Kind}}</a> <strong>{{yuan .Cents}} 元</strong></p>
+<p class="meta">{{.DateText}} · {{.Category}} · {{.ActorName}}{{if .Voided}} · 已作废{{end}}</p>
+{{if .Note}}<p>{{.Note}}</p>{{end}}
 </article>
 {{end}}
-<p>共 {{.Fin.Total}} 条
+<p class="pager">共 {{.Fin.Total}} 条
 {{if gt .Fin.Page 1}}<a href="{{.Fin.PageHref (add .Fin.Page -1)}}">上一页</a>{{end}}
 {{if .Fin.HasNext}}<a href="{{.Fin.PageHref (add .Fin.Page 1)}}">下一页</a>{{end}}
 </p>

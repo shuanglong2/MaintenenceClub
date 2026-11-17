@@ -30,10 +30,13 @@
 <label>附图<input type="file" name="file" required></label>
 <button type="submit">上传</button>
 </form>
+<details class="danger">
+<summary>作废这条记录</summary>
 <form class="stack" method="post" action="/logs/{{.Log.Entry.ID}}/void">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>作废原因<input name="reason" required></label>
 <button type="submit">作废</button>
 </form>
+</details>
 {{end}}
 {{end}}

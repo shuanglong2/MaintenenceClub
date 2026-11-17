@@ -26,6 +26,7 @@
 {{end}}
 {{else}}
 {{if not .Inv.Item.Tracked}}
+<div class="action-grid">
 <form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/move">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <input type="hidden" name="kind" value="in">
@@ -40,7 +41,9 @@
 <label>备注<input name="note"></label>
 <button type="submit">领用</button>
 </form>
+</div>
 {{end}}
+{{if .Inv.Item.Tracked}}<div class="inline-actions">
 {{if and .Inv.Item.Tracked (eq .Inv.Item.State "available")}}
 <form method="post" action="/inventory/items/{{.Inv.Item.ID}}/event">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -69,6 +72,17 @@
 <button type="submit">修好</button>
 </form>
 {{end}}
+</div>{{end}}
+{{if .Inv.Manage}}
+<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/photo" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>照片<input type="file" name="file" accept="image/*" required></label>
+<button type="submit">上传照片</button>
+</form>
+{{end}}
+{{if .Inv.Manage}}
+<details class="danger">
+<summary>报废或作废</summary>
 {{if and .Inv.Manage (gt .Inv.Item.Qty 0)}}
 <form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/move">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
@@ -78,16 +92,13 @@
 </form>
 {{end}}
 {{if .Inv.Manage}}
-<form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/photo" enctype="multipart/form-data">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<label>照片<input type="file" name="file" accept="image/*" required></label>
-<button type="submit">上传照片</button>
-</form>
 <form class="stack" method="post" action="/inventory/items/{{.Inv.Item.ID}}/void">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>作废原因<input name="reason" required></label>
 <button type="submit">作废</button>
 </form>
+{{end}}
+</details>
 {{end}}
 {{end}}
 {{range .Inv.Panels}}<h2>{{.Title}}</h2>{{.HTML}}{{end}}

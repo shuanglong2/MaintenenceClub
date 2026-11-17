@@ -4,7 +4,7 @@
 {{if eq .Inv.Stocktake.Status "confirmed"}}<p class="notice">已确认 {{time8 .Inv.Stocktake.Confirmed}}</p>{{end}}
 <form method="post" action="/inventory/stocktakes/{{.Inv.Stocktake.ID}}">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
-<table>
+<div class="table-scroll"><table>
 <thead><tr><th>编号</th><th>名称</th><th>账面</th><th>实盘</th><th>差异</th></tr></thead>
 <tbody>
 {{range .Inv.Lines}}
@@ -17,7 +17,7 @@
 </tr>
 {{end}}
 </tbody>
-</table>
+</table></div>
 {{if eq .Inv.Stocktake.Status "open"}}
 <p class="tools">
 <button type="submit">保存</button>
