@@ -365,6 +365,14 @@ main > article {
   font-weight: 600;
 }
 
+.entry-line a,
+main li a,
+td a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
 .cards {
   display: flex;
   flex-wrap: wrap;
