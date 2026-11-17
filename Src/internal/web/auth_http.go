@@ -159,6 +159,7 @@ func (s *server) fill(r *http.Request, data *page) {
 	data.User = &userView{Name: user.Session.Name, MustChange: user.Session.MustChange}
 	data.ShowAudit = people.Can(user.Session.User, people.ActAuditRead, people.Resource{})
 	data.ShowManage = people.Can(user.Session.User, people.ActPeopleManage, people.Resource{})
+	data.Finance = people.Can(user.Session.User, people.ActFinanceRead, people.Resource{})
 }
 
 func (s *server) requireUser(w http.ResponseWriter, r *http.Request) (visitor, bool) {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/finance"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
@@ -88,6 +89,7 @@ type page struct {
 	User       *userView
 	ShowAudit  bool
 	ShowManage bool
+	Finance    bool
 	People     []people.PersonView
 	Person     people.PersonView
 	HasPerson  bool
@@ -103,6 +105,7 @@ type page struct {
 	Evt        eventView
 	Task       taskView
 	Log        logView
+	Fin        finView
 }
 
 type userView struct {
@@ -119,6 +122,7 @@ type server struct {
 	events    *events.Service
 	tasks     *tasks.Service
 	logs      *logs.Service
+	finance   *finance.Service
 	weekStart time.Weekday
 	secure    bool
 	proxy     string
@@ -133,6 +137,7 @@ type Option struct {
 	Events       *events.Service
 	Tasks        *tasks.Service
 	Logs         *logs.Service
+	Finance      *finance.Service
 	WeekStart    time.Weekday
 	Secure       bool
 	TrustedProxy string
@@ -154,13 +159,14 @@ func New(db Pinger, assets *Assets, opt Option) (http.Handler, error) {
 		"logKind":      logs.KindLabel,
 		"logStatus":    logs.StatusLabel,
 		"logTarget":    logs.TargetLabel,
+		"finKind":      finance.KindLabel,
 	})
 	tpl, err := tpl.ParseFS(assets.fsys, "templates/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析模板: %w", err)
 	}
 	s := &server{
-		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks, logs: opt.Logs,
+		assets: assets, db: db, people: opt.People, docs: opt.Docs, inv: opt.Inventory, events: opt.Events, tasks: opt.Tasks, logs: opt.Logs, finance: opt.Finance,
 		weekStart: opt.WeekStart, secure: opt.Secure, proxy: opt.TrustedProxy, tpl: tpl,
 	}
 	mux := http.NewServeMux()
@@ -275,6 +281,15 @@ func (s *server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /logs/{id}/void", s.logsVoid)
 	mux.HandleFunc("POST /logs/{id}", s.logsUpdate)
 	mux.HandleFunc("GET /logs/{id}", s.logsShow)
+	mux.HandleFunc("GET /finance", s.financeList)
+	mux.HandleFunc("GET /finance/new", s.financeNew)
+	mux.HandleFunc("POST /finance", s.financeCreate)
+	mux.HandleFunc("GET /finance/stats", s.financeStats)
+	mux.HandleFunc("GET /finance/export.csv", s.financeExport)
+	mux.HandleFunc("POST /finance/categories", s.financeCategory)
+	mux.HandleFunc("POST /finance/{id}/void", s.financeVoid)
+	mux.HandleFunc("POST /finance/{id}/files", s.financeUpload)
+	mux.HandleFunc("GET /finance/{id}", s.financeShow)
 	mux.HandleFunc("/", s.notFound)
 }
 

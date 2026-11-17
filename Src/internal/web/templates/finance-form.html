@@ -1,0 +1,20 @@
+{{define "finance-form-body"}}
+<h1>记一笔</h1>
+<form class="stack" method="post" action="/finance">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>日期<input type="date" name="date" value="{{.Fin.Entry.DateText}}" required></label>
+<label>类型<select name="kind">
+<option value="in">收入</option>
+<option value="out">支出</option>
+<option value="save">存入储蓄</option>
+<option value="draw">从储蓄取出</option>
+</select></label>
+<label>金额 (元)<input name="amount" inputmode="decimal" required placeholder="12.34"></label>
+<label>分类<select name="category" required>
+{{range .Fin.Categories}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+</select></label>
+<label>备注<textarea name="note" rows="4"></textarea></label>
+<button type="submit">保存</button>
+</form>
+<p class="hint">报销记成支出, 分类选报销, 保存后可以附上发票.</p>
+{{end}}

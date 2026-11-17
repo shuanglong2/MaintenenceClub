@@ -1,0 +1,20 @@
+{{define "finance-entry-body"}}
+<h1>{{finKind .Fin.Entry.Kind}}</h1>
+<p class="tools"><a href="/finance">列表</a></p>
+<p>{{.Fin.Entry.DateText}} · {{yuan .Fin.Entry.Cents}} 元 · {{.Fin.Entry.Category}} · {{.Fin.Entry.ActorName}}</p>
+{{if .Fin.Entry.Voided}}<p class="notice">已作废: {{.Fin.Entry.VoidReason}}</p>{{end}}
+{{if .Fin.Entry.Note}}<p>{{.Fin.Entry.Note}}</p>{{end}}
+{{if .Fin.Entry.Files}}<h2>附件</h2><ul>{{range .Fin.Entry.Files}}<li><a href="/files/{{.ID}}">{{.Name}}</a></li>{{end}}</ul>{{end}}
+{{if and .Fin.CanWrite (not .Fin.Entry.Voided)}}
+<form method="post" action="/finance/{{.Fin.Entry.ID}}/files" enctype="multipart/form-data">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>发票或照片<input type="file" name="file" required></label>
+<button type="submit">上传</button>
+</form>
+<form class="stack" method="post" action="/finance/{{.Fin.Entry.ID}}/void">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>作废原因<input name="reason" required></label>
+<button type="submit">作废</button>
+</form>
+{{end}}
+{{end}}

@@ -1,0 +1,18 @@
+{{define "finance-stats-body"}}
+<h1>财务统计</h1>
+<p class="tools"><a href="/finance">列表</a></p>
+<div class="cards">
+<p class="card">手头 {{yuan .Fin.Cash}} 元</p>
+<p class="card">储蓄 {{yuan .Fin.Savings}} 元</p>
+</div>
+<h2>按月</h2>
+{{range .Fin.Months}}
+<p>{{.Key}} 收入 {{yuan .In}} 支出 {{yuan .Out}} 存入 {{yuan .Save}} 取出 {{yuan .Draw}}</p>
+<div class="bars">{{range .Ticks}}<i {{if not .}}class="off"{{end}}></i>{{end}}</div>
+{{else}}<p class="empty">还没有流水.</p>{{end}}
+<h2>按分类</h2>
+{{range .Fin.Groups}}
+<p>{{.Key}} 收入 {{yuan .In}} 支出 {{yuan .Out}} 存入 {{yuan .Save}} 取出 {{yuan .Draw}}</p>
+<div class="bars">{{range .Ticks}}<i {{if not .}}class="off"{{end}}></i>{{end}}</div>
+{{else}}<p class="empty">还没有流水.</p>{{end}}
+{{end}}

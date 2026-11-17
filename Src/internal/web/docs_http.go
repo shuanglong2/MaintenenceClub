@@ -12,6 +12,7 @@ import (
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/finance"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
@@ -518,7 +519,7 @@ func (s *server) mdPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
-	_, actor, ok := s.docUser(w, r)
+	user, actor, ok := s.docUser(w, r)
 	if !ok {
 		return
 	}
@@ -559,6 +560,15 @@ func (s *server) fileDownload(w http.ResponseWriter, r *http.Request) {
 		}, id)
 		if err != nil {
 			s.showLogErr(w, r, err)
+			return
+		}
+	}
+	if !allowed && s.finance != nil {
+		allowed, err = s.finance.CanSeeFile(r.Context(), finance.Actor{
+			ID: actor.ID, Name: actor.Name, Role: actor.Role, Finance: user.Session.User.Finance, Active: actor.Active, IP: actor.IP,
+		}, id)
+		if err != nil {
+			s.showFinErr(w, r, err)
 			return
 		}
 	}

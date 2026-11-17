@@ -1,0 +1,44 @@
+{{define "finance-body"}}
+<h1>财务</h1>
+<div class="cards">
+<p class="card">手头 {{yuan .Fin.Cash}} 元</p>
+<p class="card">储蓄 {{yuan .Fin.Savings}} 元</p>
+</div>
+<p class="tools"><a href="/finance/stats">统计</a> <a href="/finance/export.csv">导出</a>{{if .Fin.CanWrite}} <a href="/finance/new">记一笔</a>{{end}}</p>
+<form class="stack" method="get" action="/finance">
+<label>月份<input type="month" name="month" value="{{.Fin.Month}}"></label>
+<label>类型<select name="kind"><option value="">全部</option>
+<option value="in" {{if eq .Fin.Kind "in"}}selected{{end}}>收入</option>
+<option value="out" {{if eq .Fin.Kind "out"}}selected{{end}}>支出</option>
+<option value="save" {{if eq .Fin.Kind "save"}}selected{{end}}>存入储蓄</option>
+<option value="draw" {{if eq .Fin.Kind "draw"}}selected{{end}}>从储蓄取出</option>
+</select></label>
+<label>分类<select name="category"><option value="">全部</option>
+{{range .Fin.Categories}}<option value="{{.ID}}" {{if eq .ID $.Fin.CategoryID}}selected{{end}}>{{.Name}}</option>{{end}}
+</select></label>
+<label>经手人<select name="actor"><option value="">全部</option>
+{{range .Fin.Actors}}<option value="{{.ID}}" {{if eq .ID $.Fin.ActorID}}selected{{end}}>{{.Name}}</option>{{end}}
+</select></label>
+<button type="submit">筛选</button>
+</form>
+{{if .Fin.Entries}}
+{{range .Fin.Entries}}
+<article {{if .Voided}}class="muted"{{end}}>
+<p><a href="/finance/{{.ID}}">{{finKind .Kind}}</a> {{.DateText}} {{yuan .Cents}} 元 {{.Category}} {{.ActorName}}{{if .Voided}} 已作废{{end}}</p>
+<p>{{.Note}}</p>
+</article>
+{{end}}
+<p>共 {{.Fin.Total}} 条
+{{if gt .Fin.Page 1}}<a href="{{.Fin.PageHref (add .Fin.Page -1)}}">上一页</a>{{end}}
+{{if .Fin.HasNext}}<a href="{{.Fin.PageHref (add .Fin.Page 1)}}">下一页</a>{{end}}
+</p>
+{{else}}<p class="empty">没有流水.</p>{{end}}
+{{if .Fin.CanWrite}}
+<form class="stack" method="post" action="/finance/categories">
+<input type="hidden" name="csrf" value="{{.CSRF}}">
+<label>新分类<input name="name" required maxlength="40"></label>
+<button type="submit">添加分类</button>
+</form>
+{{end}}
+<p class="hint">记错了就作废, 更正再记一笔. 作废的不计入余额.</p>
+{{end}}

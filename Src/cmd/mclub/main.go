@@ -13,6 +13,7 @@ import (
 
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/docs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/events"
+	"github.com/shuanglong2/MaintenenceClub/Src/internal/finance"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/inventory"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/logs"
 	"github.com/shuanglong2/MaintenenceClub/Src/internal/people"
@@ -116,6 +117,8 @@ func cmdServe() error {
 	web.RegisterEventWidget(eventSvc)
 	web.RegisterInventoryWidget(inv)
 	web.RegisterDocsWidget(docSvc)
+	finSvc := finance.New(pool, store)
+	web.RegisterFinanceWidget(finSvc)
 	go cleanUploads(ctx, store)
 	handler, err := web.New(pool, assets, web.Option{
 		People:       svc,
@@ -124,6 +127,7 @@ func cmdServe() error {
 		Events:       eventSvc,
 		Tasks:        taskSvc,
 		Logs:         logSvc,
+		Finance:      finSvc,
 		WeekStart:    cfg.WeekStart,
 		Secure:       cfg.CookieSecure,
 		TrustedProxy: cfg.TrustedProxy,
@@ -182,6 +186,7 @@ func modules() []migrate.Module {
 		{Name: "events", FS: events.SQL},
 		{Name: "tasks", FS: tasks.SQL},
 		{Name: "logs", FS: logs.SQL},
+		{Name: "finance", FS: finance.SQL},
 	}
 }
 

@@ -11,7 +11,7 @@
 <a class="brand" href="/">维修组</a>
 <nav>
 {{if .User}}
-{{if not .User.MustChange}}<a href="/docs">文档</a><a href="/inventory">库存</a><a href="/events">活动</a><a href="/tasks">任务</a><a href="/logs">日志</a><a href="/people">人员</a>{{end}}
+{{if not .User.MustChange}}<a href="/docs">文档</a><a href="/inventory">库存</a><a href="/events">活动</a><a href="/tasks">任务</a><a href="/logs">日志</a>{{if and .Finance (not .User.MustChange)}}<a href="/finance">财务</a>{{end}}<a href="/people">人员</a>{{end}}
 {{if and .ShowAudit (not .User.MustChange)}}<a href="/audit">审计</a>{{end}}
 <a href="/account">我的</a>
 <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">退出</button></form>
