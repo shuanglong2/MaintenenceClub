@@ -319,6 +319,7 @@
         if (next === "sv") editor.setPreviewMode("editor");
       },
       preview: {
+        markdown: { mark: true, sanitize: true },
         math: mathOptions(),
         hljs: { style: "github", lineNumber: false },
         theme: { current: "light" }
