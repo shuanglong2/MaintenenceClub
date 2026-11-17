@@ -66,7 +66,7 @@
 {{if and (eq .Gather.Open.Status "open") (not .Gather.Joined)}}
 <form method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/join"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">参加</button></form>
 {{end}}
-{{if .Gather.Joined}}
+{{if and .Gather.Joined (ne .Gather.Open.Status "done")}}
 <form method="post" action="{{.Gather.Base}}/{{.Gather.Open.ID}}/leave"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">退出</button></form>
 {{end}}
 </div>

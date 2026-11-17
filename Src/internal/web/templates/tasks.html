@@ -48,15 +48,15 @@
 {{if .Task.Task.Contact}}<p>联系方式: {{.Task.Task.Contact}}</p>{{end}}
 {{if .Task.BodyHTML}}<div class="doc">{{.Task.BodyHTML}}</div>{{else if .Task.Task.Body}}<p>{{.Task.Task.Body}}</p>{{end}}
 <div class="tools">
-{{if not .Task.Task.ClaimedID}}
+{{if and (not .Task.Task.ClaimedID) (or (eq .Task.Task.Status "todo") (eq .Task.Task.Status "doing"))}}
 <form method="post" action="/tasks/{{.Task.Task.ID}}/claim"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">认领</button></form>
 {{end}}
-{{if .Task.Task.ClaimedID}}
+{{if and .Task.Task.ClaimedID (or (eq .Task.Task.Status "todo") (eq .Task.Task.Status "doing"))}}
 <form method="post" action="/tasks/{{.Task.Task.ID}}/done"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">完成</button></form>
 <form method="post" action="/tasks/{{.Task.Task.ID}}/release"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">放弃</button></form>
 {{end}}
 </div>
-{{if .Task.Leader}}
+{{if and .Task.Leader (or (eq .Task.Task.Status "todo") (eq .Task.Task.Status "doing"))}}
 <form class="stack" method="post" action="/tasks/{{.Task.Task.ID}}/assign">
 <input type="hidden" name="csrf" value="{{.CSRF}}">
 <label>指派
